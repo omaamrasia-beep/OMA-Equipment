@@ -111,11 +111,14 @@ const fmtDate=(ts,t)=>{
 const fileStamp=ts=>{const d=new Date(ts);return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;};
 
 async function getClientIP(){if(_clientIP)return _clientIP;try{const r=await fetch('https://api.ipify.org?format=json');const j=await r.json();_clientIP=j.ip||'';}catch(e){_clientIP='';}return _clientIP;}
+// Google ไม่ส่ง CORS header ให้ origin นอกโดเมนตัวเอง — หน้าเว็บที่ host แยก (เช่น Vercel)
+// ต้องยิงผ่าน /api/proxy (serverless function) แทนการเรียก API_URL ตรง ๆ
+const FETCH_URL=/(^|\.)google(usercontent)?\.com$/.test(location.hostname)?API_URL:'/api/proxy';
 async function api(action,payload={}){
   const ctx={device:navigator.platform||'',browser:navigator.userAgent||'',ip:await getClientIP(),ts:new Date().toISOString()};
   const body=JSON.stringify({action,...payload,token:AUTH.token,ctx});
   let res;
-  try{res=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},redirect:'follow',body});}
+  try{res=await fetch(FETCH_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},redirect:'follow',body});}
   catch(e){return{ok:false,error:'NETWORK',message:'Could not connect to server'};}
   let data;
   try{data=await res.json();}catch(e){return{ok:false,error:'BAD_RESPONSE',message:'Invalid response format'};}
