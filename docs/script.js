@@ -420,6 +420,15 @@ wireImg('fileSticker','dropSticker',d=>imgSticker=d);
 wireImg('fileImg3','dropImg3',d=>img3=d);
 wireImg('fileImg4','dropImg4',d=>img4=d);
 
+// แสดงรูปเดิมที่เคยแนบไว้เมื่อเปิดแก้ไขรายการ (ใช้ thumbnail ที่มีอยู่แล้วเพื่อโหลดเร็ว)
+function setImgPreview(dropId,url){
+  if(!url)return;
+  const lbl=$('#'+dropId);if(!lbl)return;
+  lbl.classList.add('has-img');
+  lbl.style.backgroundImage=`url(${driveViewUrl(url,600)})`;
+  const ph=lbl.querySelector('.ph-content');if(ph)ph.style.display='none';
+}
+
 /* ─── SAVE RECORD ───────────────────────────────────────── */
 // เช็คว่าค่าที่เลือก/พิมพ์ไว้ใน sel ตรงกับ Master Data ที่มีอยู่แล้วไหม — ถ้าไม่ตรงเป๊ะกับค่าไหนเลย
 // ถือว่าเป็นค่าใหม่ที่หน้างานพิมพ์เอง คืน label ของฟิลด์ที่เป็นค่าใหม่ (ใช้ติดป้าย "Pending Review")
@@ -563,7 +572,7 @@ async function confirmRecordReviewed(id){
   if(r&&r.ok){toast('Confirmed',true);await loadRecords();}
   else toast((r&&r.message)||'Confirmation failed',false);
 }
-function editEntry(id){const e=entries.find(x=>x.id===id);if(!e)return;resetForm();editingId=id;imgMain=e.imgMain||'';imgSticker=e.imgSticker||'';img3=e.img3||'';img4=e.img4||'';choose('project',e.project||'');choose('system',e.system||'');choose('loc',e.locName||'');choose('sub',e.subName||'');choose('equip',e.equipment||'');choose('serial',e.serial||'');if($('#inpBrand'))$('#inpBrand').value=e.brand||'';if($('#inpModel'))$('#inpModel').value=e.model||'';$('#inpAsset').value=e.asset||'';syncComboVal('inpAsset');$('#inpInspector').value=e.inspector||'';$('#inspCombo').classList.toggle('has-val',!!e.inspector);$('#inpNote').value=e.note||'';$('#addEyebrow').textContent='Edit Record';$('#addTitle').textContent='Edit Record';$('#saveBtn').textContent='Save Changes';goTab('add');window.scrollTo(0,0);}
+function editEntry(id){const e=entries.find(x=>x.id===id);if(!e)return;resetForm();editingId=id;imgMain=e.imgMain||'';imgSticker=e.imgSticker||'';img3=e.img3||'';img4=e.img4||'';setImgPreview('dropMain',e.thumbMain||e.imgMain);setImgPreview('dropSticker',e.thumbSticker||e.imgSticker);setImgPreview('dropImg3',e.thumb3||e.img3);setImgPreview('dropImg4',e.thumb4||e.img4);choose('project',e.project||'');choose('system',e.system||'');choose('loc',e.locName||'');choose('sub',e.subName||'');choose('equip',e.equipment||'');choose('serial',e.serial||'');if($('#inpBrand'))$('#inpBrand').value=e.brand||'';if($('#inpModel'))$('#inpModel').value=e.model||'';$('#inpAsset').value=e.asset||'';syncComboVal('inpAsset');$('#inpInspector').value=e.inspector||'';$('#inspCombo').classList.toggle('has-val',!!e.inspector);$('#inpNote').value=e.note||'';$('#addEyebrow').textContent='Edit Record';$('#addTitle').textContent='Edit Record';$('#saveBtn').textContent='Save Changes';goTab('add');window.scrollTo(0,0);}
 function delEntry(id){confirmDlg('Permanently delete this record?','Delete',async()=>{if(AUTH.token){const r=await api(ACT.deleteRecord,{id});if(r&&r.ok){await loadRecords();toast('Record deleted',true);}else toast((r&&r.message)||'Delete failed',false);}});}
 
 /* ─── สแกน QR/บาร์โค้ด — หา Serial ที่ตรงกัน แล้วเปิดฟอร์มให้เลย ───────── */
@@ -1449,12 +1458,9 @@ async function generateWordTemplate(){
       {u:e.thumb4||e.img4,cap:'Additional photo 2'}
     ].filter(s=>s.u);
     if(photoSlots.length){
-      const slotBufs=[];
-      for(const s of photoSlots){
-        setWarpStatus('Loading images...');
-        const b=await fetchImageBuffer(s.u);
-        if(b)slotBufs.push({buf:b,cap:s.cap});
-      }
+      setWarpStatus('Loading images...');
+      const bufs=await Promise.all(photoSlots.map(s=>fetchImageBuffer(s.u)));
+      const slotBufs=photoSlots.map((s,i)=>({buf:bufs[i],cap:s.cap})).filter(s=>s.buf);
       const CELL_DXA_HALF=CONTENT_DXA/2, CELL_DXA_FULL=CONTENT_DXA; // ครึ่งหน้า/เต็มหน้า เป็น twips (1/20pt) พอดีความกว้างเนื้อหาจริง (A4 - margin) — เกินแล้ว Google Docs จะเลื่อนตารางออกนอกจอ
       const cellFor=(slot,wide)=>new TableCell({borders:noBorders(),columnSpan:wide?2:1,width:{size:wide?CELL_DXA_FULL:CELL_DXA_HALF,type:WidthType.DXA},children:[
         new Paragraph({alignment:AlignmentType.CENTER,children:[new ImageRun({data:slot.buf,transformation:{width:wide?420:300,height:wide?315:225}})]}),
