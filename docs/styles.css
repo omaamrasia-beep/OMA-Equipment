@@ -322,7 +322,7 @@ td.codecell{font-family:'IBM Plex Mono';font-size:11.5px;color:var(--accent-deep
 .qr-label-card .qr-text{font-size:9.5pt;line-height:1.5;color:#000}
 @media print{
   @page{ size:A4; margin:20mm 16mm 14mm 16mm; }
-  header.app,.tabs,.no-print,.toast,#rptDialog,#qrLabelModal,#qrScanModal{display:none !important}
+  header.app,.tabs,.no-print,.toast,#rptDialog,#qrMasterModal,#qrScanModal{display:none !important}
   body{background:#fff} main{padding:0;max-width:none}
   .panel{display:none !important} #reportArea{display:block !important}
   .rpt-runhead{position:fixed;top:-16mm;left:0;right:0;height:14mm;display:flex;align-items:center;gap:10px;border-bottom:1pt solid #000;padding-bottom:1mm;background:#fff}

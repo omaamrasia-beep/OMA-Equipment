@@ -26,7 +26,7 @@
       </div>
       <div class="info">
         <h2>Sign In</h2>
-        <div class="sub">AMR Inspection · OMA</div>
+        <div class="sub">AMR Inspection · OMD</div>
       </div>
     </div>
     <label for="authUser">Username</label>
@@ -239,7 +239,6 @@
       </div>
     </details>
     <button class="ghost-btn" id="exportXlsx">Export Excel</button>
-    <button class="ghost-btn qr-only" id="printQrAllBtn">Print QR (filtered)</button>
     <button class="ghost-btn word-report-only" id="openWordReportBtn" disabled>Report</button>
   </div>
   <div class="rlist" id="savedGrid"></div>
@@ -312,6 +311,7 @@
     <button class="btn btn-primary edit-only" id="addMasterBtn">Add Equipment</button>
     <button class="btn btn-danger edit-only" id="bulkDelMasterBtn" style="background:#EF4444;color:#fff;border:none">Delete by Filter</button>
     <button class="ghost-btn edit-only" id="openImportExcelBtn">Import Equipment Data (Excel)</button>
+    <button class="ghost-btn admin-only" id="openQrMasterBtn">QR Code</button>
   </div>
   <div class="table-wrap">
     <table>
@@ -513,18 +513,31 @@
     </div>
     <div id="qrReaderBox" style="width:100%;border-radius:12px;overflow:hidden;background:#000;min-height:240px"></div>
     <div id="qrScanMsg" style="margin-top:12px;font-size:13px;color:var(--ink-soft);text-align:center">Opening camera…</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
+      <div style="flex:1;height:1px;background:var(--line)"></div>
+      <span style="font-size:12px;color:var(--ink-faint)">or</span>
+      <div style="flex:1;height:1px;background:var(--line)"></div>
+    </div>
+    <label class="ghost-btn" for="qrScanFile" style="width:100%;justify-content:center;margin-top:14px;cursor:pointer">Attach a photo to scan</label>
+    <input type="file" id="qrScanFile" accept="image/*" style="display:none">
   </div>
 </div>
 
-<!-- ══════ MODAL: QR LABEL (single record) ══════ -->
-<div id="qrLabelModal" style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(10,14,20,.85);align-items:center;justify-content:center;padding:20px">
-  <div style="background:#fff;border-radius:18px;max-width:340px;width:100%;padding:24px;box-shadow:0 8px 40px rgba(0,0,0,.3);text-align:center">
-    <div style="display:flex;justify-content:flex-end">
-      <button id="qrLabelClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:#888">&times;</button>
+<!-- ══════ MODAL: QR CODE GENERATOR (Master Data, admin only) ══════ -->
+<div id="qrMasterModal" style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(10,14,20,.85);align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:18px;max-width:420px;width:100%;padding:26px;box-shadow:0 8px 40px rgba(0,0,0,.3);position:relative">
+    <button id="qrMasterClose" style="position:absolute;top:14px;right:14px;background:none;border:none;font-size:22px;cursor:pointer;color:#888">&times;</button>
+    <div style="font-size:17px;font-weight:700;color:#111;margin-bottom:4px">Generate QR Codes</div>
+    <div style="font-size:13px;color:#666;margin-bottom:16px">Narrow down with filters, or leave as "All" to include everything</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <select id="qrfProject" class="tin" style="width:100%"><option value="">All Projects</option></select>
+      <select id="qrfTypeLoc" class="tin" style="width:100%"><option value="">All Location Types</option></select>
+      <select id="qrfLoc" class="tin" style="width:100%"><option value="">All Locations</option></select>
+      <select id="qrfSub" class="tin" style="width:100%"><option value="">All Sub-locations</option></select>
+      <select id="qrfEquip" class="tin" style="width:100%"><option value="">All Equipment</option></select>
     </div>
-    <div id="qrLabelCode" style="display:flex;justify-content:center;margin:4px 0 14px"></div>
-    <div id="qrLabelText" style="color:#111;font-size:13.5px;line-height:1.6"></div>
-    <button class="btn btn-primary" id="qrLabelPrintBtn" style="width:100%;margin-top:16px">Print This QR Label</button>
+    <div id="qrMasterCount" style="margin-top:14px;font-size:13px;color:#444"></div>
+    <button class="btn btn-primary" id="qrMasterGenBtn" style="width:100%;margin-top:16px">Generate QR Codes</button>
   </div>
 </div>
 

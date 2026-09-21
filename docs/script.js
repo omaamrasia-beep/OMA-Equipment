@@ -564,8 +564,8 @@ function renderSaved(){
   const canConfirm=AUTH.user&&(AUTH.user.role==='admin'||AUTH.user.role==='manager');
   const grid=$('#savedGrid');
   if(!list.length){grid.innerHTML=`<div class="empty"><b>${entries.length?'No records match the condition':'No records yet'}</b></div>`;return;}
-  grid.innerHTML=list.map(e=>{const thumb=driveViewUrl(e.thumbMain||e.thumbSticker||e.imgMain||e.imgSticker||'',300);const n=(e.imgMain?1:0)+(e.imgSticker?1:0);const title=esc([e.equipment,e.brand,e.model].filter(Boolean).join(' · '))||'(Equipment not specified)';const loc=esc([e.project,e.locName,e.subName].filter(Boolean).join(' › '));const pendingBadge=e.pendingReview?`<div class="loc" style="color:#F97316;font-weight:600">Pending Review${e.newFields?': '+esc(e.newFields):''}</div>`:'';return `<div class="rrow" data-id="${e.id}"><div class="thumb" style="background-image:url(${thumb})">${n?`<span class="cnt">${n} photos</span>`:''}</div><div class="body"><div class="tt">${title}</div>${loc?`<div class="loc">${loc}</div>`:''}${pendingBadge}<div class="meta"><span>${esc(e.inspector||'-')}</span>${e.serial?`<span>SN: ${esc(e.serial)}</span>`:''}<span>${fmtDate(e.createdAt,true)}</span></div></div><div class="acts">${canEdit()?'<button data-act="edit">Edit</button>':''}<button data-act="img">Photos</button>${hasPagePerm('qrScan')?'<button data-act="qr">🏷️ QR</button>':''}${e.pendingReview&&canConfirm?'<button data-act="confirm" style="color:#F97316">Confirmed</button>':''}${canDelete()?'<button data-act="del" class="del">Delete</button>':''}</div></div>`;}).join('');
-  grid.querySelectorAll('.rrow').forEach(c=>{const id=c.dataset.id;const be=c.querySelector('[data-act="edit"]');if(be)be.onclick=()=>editEntry(id);c.querySelector('[data-act="img"]').onclick=()=>viewImgs(id);const bq=c.querySelector('[data-act="qr"]');if(bq)bq.onclick=()=>openQrLabel(id);const bc=c.querySelector('[data-act="confirm"]');if(bc)bc.onclick=()=>confirmRecordReviewed(id);const bd=c.querySelector('[data-act="del"]');if(bd)bd.onclick=()=>delEntry(id);});
+  grid.innerHTML=list.map(e=>{const thumb=driveViewUrl(e.thumbMain||e.thumbSticker||e.imgMain||e.imgSticker||'',300);const n=(e.imgMain?1:0)+(e.imgSticker?1:0);const title=esc([e.equipment,e.brand,e.model].filter(Boolean).join(' · '))||'(Equipment not specified)';const loc=esc([e.project,e.locName,e.subName].filter(Boolean).join(' › '));const pendingBadge=e.pendingReview?`<div class="loc" style="color:#F97316;font-weight:600">Pending Review${e.newFields?': '+esc(e.newFields):''}</div>`:'';return `<div class="rrow" data-id="${e.id}"><div class="thumb" style="background-image:url(${thumb})">${n?`<span class="cnt">${n} photos</span>`:''}</div><div class="body"><div class="tt">${title}</div>${loc?`<div class="loc">${loc}</div>`:''}${pendingBadge}<div class="meta"><span>${esc(e.inspector||'-')}</span>${e.serial?`<span>SN: ${esc(e.serial)}</span>`:''}<span>${fmtDate(e.createdAt,true)}</span></div></div><div class="acts">${canEdit()?'<button data-act="edit">Edit</button>':''}<button data-act="img">Photos</button>${e.pendingReview&&canConfirm?'<button data-act="confirm" style="color:#F97316">Confirmed</button>':''}${canDelete()?'<button data-act="del" class="del">Delete</button>':''}</div></div>`;}).join('');
+  grid.querySelectorAll('.rrow').forEach(c=>{const id=c.dataset.id;const be=c.querySelector('[data-act="edit"]');if(be)be.onclick=()=>editEntry(id);c.querySelector('[data-act="img"]').onclick=()=>viewImgs(id);const bc=c.querySelector('[data-act="confirm"]');if(bc)bc.onclick=()=>confirmRecordReviewed(id);const bd=c.querySelector('[data-act="del"]');if(bd)bd.onclick=()=>delEntry(id);});
 }
 async function confirmRecordReviewed(id){
   const r=await api(ACT.confirmRecordReviewed,{id});
@@ -636,13 +636,33 @@ $('#openQrScanBtn')?.addEventListener('click',openQrScanner);
 $('#qrScanClose')?.addEventListener('click',closeQrScanner);
 $('#qrScanModal')?.addEventListener('click',e=>{if(e.target===$('#qrScanModal'))closeQrScanner();});
 
+// สแกนจากรูปที่แนบ (แทนกล้องสด) — เผื่อกล้องใช้ไม่ได้ หรือมีรูปฉลาก QR/บาร์โค้ดอยู่แล้ว
+async function scanQrFromFile(file){
+  if(!file)return;
+  const msg=$('#qrScanMsg');
+  if(typeof Html5Qrcode==='undefined'){if(msg)msg.textContent='Scanner library is still loading, please try again';return;}
+  if(msg)msg.textContent='Reading photo...';
+  if(_qrScanner){try{await _qrScanner.stop();}catch(e){}try{await _qrScanner.clear();}catch(e){}_qrScanner=null;}
+  const scanner=new Html5Qrcode('qrReaderBox');
+  try{
+    const text=await scanner.scanFile(file,true);
+    try{await scanner.clear();}catch(e){}
+    onQrScanSuccess(text);
+  }catch(err){
+    try{await scanner.clear();}catch(e){}
+    if(msg)msg.textContent='Could not find a QR/barcode in this photo — try another one';
+  }
+}
+$('#qrScanFile')?.addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';scanQrFromFile(f);});
+
 /* ─── สร้าง/พิมพ์ป้าย QR — เก็บ Serial Number เป็นค่าในโค้ด ให้พิมพ์ไปติดอุปกรณ์จริง แล้วใช้ปุ่มสแกนด้านบนเปิดฟอร์มได้ทันที ─── */
 // คืนค่าเป็น data URL รูป QR (ใช้ตอนสร้างชีทพิมพ์หลายใบ ซึ่งต้องประกอบเป็น string HTML ไม่ใช่ DOM สด)
 function qrDataUrl(text,size){
   const tmp=document.createElement('div');
   new QRCode(tmp,{text:String(text||''),width:size,height:size,correctLevel:QRCode.CorrectLevel.M});
-  const img=tmp.querySelector('img');
-  return img?img.src:'';
+  // qrcode.js วาดลง <canvas> จริง ส่วน <img> คู่กันไม่ถูกเติม src เว้นเรียก makeImage() เอง — ดึงจาก canvas ตรงๆ เชื่อถือได้กว่า
+  const canvas=tmp.querySelector('canvas');
+  return canvas?canvas.toDataURL('image/png'):'';
 }
 function qrLabelInfo(e){
   return {
@@ -651,19 +671,10 @@ function qrLabelInfo(e){
     serial:e.serial||e.id
   };
 }
-function openQrLabel(id){
-  const e=entries.find(x=>x.id===id); if(!e)return;
-  const modal=$('#qrLabelModal'); if(!modal)return;
-  const box=$('#qrLabelCode'); if(box){box.innerHTML='';new QRCode(box,{text:String(e.serial||e.id),width:160,height:160,correctLevel:QRCode.CorrectLevel.M});}
-  const info=qrLabelInfo(e);
-  $('#qrLabelText').innerHTML=`<b>${esc(info.title)}</b><br>${esc(info.loc)}<br>Serial: <b>${esc(info.serial)}</b>`;
-  modal.dataset.recordId=id;
-  modal.style.display='flex';
-}
 function printQrForList(list){
   if(!list.length){toast('No data matches the current filter',false);return;}
   const area=$('#reportArea'); if(!area)return;
-  const m=$('#qrLabelModal'); if(m)m.style.display='none';
+  const m=$('#qrMasterModal'); if(m)m.style.display='none';
   area.innerHTML='<div class="qr-print-grid">'+list.map(e=>{
     const info=qrLabelInfo(e);
     const src=qrDataUrl(info.serial,140);
@@ -671,14 +682,49 @@ function printQrForList(list){
   }).join('')+'</div>';
   setTimeout(()=>window.print(),80);
 }
-$('#qrLabelClose')?.addEventListener('click',()=>{$('#qrLabelModal').style.display='none';});
-$('#qrLabelModal')?.addEventListener('click',e=>{if(e.target===$('#qrLabelModal'))$('#qrLabelModal').style.display='none';});
-$('#qrLabelPrintBtn')?.addEventListener('click',()=>{
-  const id=$('#qrLabelModal').dataset.recordId;
-  const e=entries.find(x=>x.id===id); if(!e)return;
-  printQrForList([e]);
-});
-$('#printQrAllBtn')?.addEventListener('click',()=>printQrForList(getSavedFilteredList()));
+
+/* ─── QR CODE GENERATOR (Master Data, admin only) ──────────── */
+function fillQrMasterFilters(){
+  const fp=$('#qrfProject'); if(!fp) return;
+  const projects=uniq(master.map(m=>m.project)).filter(Boolean).sort((a,b)=>a.localeCompare(b,'th'));
+  const prev=fp.value;
+  fp.innerHTML='<option value="">All Projects</option>'+projects.map(p=>`<option value="${escAttr(p)}">${esc(p)}</option>`).join('');
+  if(projects.includes(prev)) fp.value=prev;
+  const fillDep=(el,src,key,defLabel)=>{
+    if(!el) return;
+    const prevV=el.value;
+    const vals=uniq(src.map(m=>m[key])).filter(Boolean).sort((a,b)=>a.localeCompare(b,'th'));
+    el.innerHTML=`<option value="">${defLabel}</option>`+vals.map(v=>`<option value="${escAttr(v)}">${esc(v)}</option>`).join('');
+    if(vals.includes(prevV)) el.value=prevV;
+  };
+  let sc=master; if(fp.value) sc=sc.filter(m=>m.project===fp.value);
+  fillDep($('#qrfTypeLoc'),sc,'typeLocation','All Location Types');
+  let sc2=sc; if($('#qrfTypeLoc')&&$('#qrfTypeLoc').value) sc2=sc2.filter(m=>m.typeLocation===$('#qrfTypeLoc').value);
+  fillDep($('#qrfLoc'),sc2,'locName','All Locations');
+  let sc3=sc2; if($('#qrfLoc')&&$('#qrfLoc').value) sc3=sc3.filter(m=>m.locName===$('#qrfLoc').value);
+  fillDep($('#qrfSub'),sc3,'subName','All Sub-locations');
+  let sc4=sc3; if($('#qrfSub')&&$('#qrfSub').value) sc4=sc4.filter(m=>m.subName===$('#qrfSub').value);
+  fillDep($('#qrfEquip'),sc4,'equipment','All Equipment');
+  updateQrMasterCount();
+}
+function getQrMasterFilteredList(){
+  const fp=$('#qrfProject')?$('#qrfProject').value:'';
+  const ftl=$('#qrfTypeLoc')?$('#qrfTypeLoc').value:'';
+  const fl=$('#qrfLoc')?$('#qrfLoc').value:'';
+  const fsub=$('#qrfSub')?$('#qrfSub').value:'';
+  const feq=$('#qrfEquip')?$('#qrfEquip').value:'';
+  return master.filter(m=>(!fp||m.project===fp)&&(!ftl||m.typeLocation===ftl)&&(!fl||m.locName===fl)&&(!fsub||m.subName===fsub)&&(!feq||m.equipment===feq));
+}
+function updateQrMasterCount(){
+  const el=$('#qrMasterCount'); if(!el) return;
+  const n=getQrMasterFilteredList().length;
+  el.textContent=`${n} equipment item${n===1?'':'s'} will be printed`;
+}
+$('#openQrMasterBtn')?.addEventListener('click',()=>{fillQrMasterFilters();$('#qrMasterModal').style.display='flex';});
+$('#qrMasterClose')?.addEventListener('click',()=>{$('#qrMasterModal').style.display='none';});
+$('#qrMasterModal')?.addEventListener('click',e=>{if(e.target===$('#qrMasterModal'))$('#qrMasterModal').style.display='none';});
+['qrfProject','qrfTypeLoc','qrfLoc','qrfSub','qrfEquip'].forEach(id=>{$('#'+id)?.addEventListener('change',fillQrMasterFilters);});
+$('#qrMasterGenBtn')?.addEventListener('click',()=>printQrForList(getQrMasterFilteredList()));
 // ตัวดูรูปแบบ lightbox ใช้ร่วมกันทั้งหน้ารายการและสำรวจภาคสนาม
 // รองรับซูม: ดับเบิลคลิก/แตะ 2 ครั้งเพื่อซูมเข้า-ออก แล้วลาก (mouse/touch) เพื่อเลื่อนดูส่วนที่ซูมได้
 function openImageViewer(imgs){
