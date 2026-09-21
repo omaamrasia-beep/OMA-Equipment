@@ -274,21 +274,6 @@
 <!-- ══════ WARP ANIMATION OVERLAY (shown while generating the Word report) ══════ -->
 <div id="warpOverlay" style="display:none;position:fixed;inset:0;z-index:99999;background:#03040c;overflow:hidden">
   <canvas id="warpCanvas" style="position:absolute;inset:0;width:100%;height:100%;display:block"></canvas>
-  <div id="warpCockpit" aria-hidden="true">
-    <div class="wc-frame"></div>
-    <div class="wc-hud wc-hud-l">
-      <div class="wc-hud-title">NAVICOMPUTER</div>
-      <div class="wc-hud-row">◉ LOCKED</div>
-      <div class="wc-hud-row">HYPERSPACE JUMP</div>
-      <div class="wc-hud-row wc-blink">● ACTIVE</div>
-    </div>
-    <div class="wc-hud wc-hud-r">
-      <div class="wc-hud-title">DESTINATION</div>
-      <div class="wc-hud-row" id="wcDest">report.docx</div>
-      <div class="wc-hud-row" id="wcSub">Calculating route…</div>
-    </div>
-    <div class="wc-console"><span></span><span></span><span></span><span></span><span></span></div>
-  </div>
   <div id="warpDone" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;flex-direction:column">
     <canvas id="warpPlanet" width="240" height="240"></canvas>
     <div id="warpDoneText">Report generated ✨</div>

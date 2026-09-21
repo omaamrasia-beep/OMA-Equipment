@@ -1333,7 +1333,6 @@ function startWarpAnimation(){
   const ov=$('#warpOverlay'); if(!ov) return;
   ov.style.display='block';
   const done=$('#warpDone'); if(done) done.style.display='none';
-  const cockpit=$('#warpCockpit'); if(cockpit) cockpit.style.display='block';
   if(_earthRAF){cancelAnimationFrame(_earthRAF);_earthRAF=null;}
   const canvas=$('#warpCanvas'); if(!canvas) return;
   const ctx=canvas.getContext('2d');
@@ -1362,11 +1361,9 @@ function startWarpAnimation(){
 }
 function setWarpStatus(msg){
   const el=$('#warpStatus'); if(el) el.innerHTML=msg;
-  const sub=$('#wcSub'); if(sub && msg) sub.textContent=msg.replace(/<[^>]*>/g,'');
 }
 function finishWarpAnimation(){
   if(_warpRAF){cancelAnimationFrame(_warpRAF);_warpRAF=null;}
-  const cockpit=$('#warpCockpit'); if(cockpit) cockpit.style.display='none';
   const done=$('#warpDone'); if(done) done.style.display='flex';
   setWarpStatus('');
   const canvas=$('#warpPlanet');
@@ -1381,7 +1378,6 @@ function finishWarpAnimation(){
 function closeWarpAnimation(){
   const ov=$('#warpOverlay'); if(ov) ov.style.display='none';
   const done=$('#warpDone'); if(done) done.style.display='none';
-  const cockpit=$('#warpCockpit'); if(cockpit) cockpit.style.display='none';
   if(_warpRAF){cancelAnimationFrame(_warpRAF);_warpRAF=null;}
   if(_earthRAF){cancelAnimationFrame(_earthRAF);_earthRAF=null;}
 }
@@ -1435,8 +1431,6 @@ async function generateWordTemplate(){
   /* Body */
   setWarpStatus('Grouping data...');
   const bodyKids=[];
-  let imgDone=0,totalImgs=0;
-  entries.forEach(e=>{[e.thumbMain||e.imgMain,e.thumbSticker||e.imgSticker,e.thumb3||e.img3,e.thumb4||e.img4].forEach(u=>{if(u)totalImgs++;});});
 
   async function pushEquipmentBlock(e, idx){
     // keepNext:true ทุกบรรทัดก่อนตารางรูป — บังคับให้ Word ไม่ตัดหน้าคั่นกลางบล็อกนี้
@@ -1454,8 +1448,7 @@ async function generateWordTemplate(){
     if(photoSlots.length){
       const slotBufs=[];
       for(const s of photoSlots){
-        imgDone++;
-        setWarpStatus(`Loading images... ${imgDone}/${totalImgs}`);
+        setWarpStatus('Loading images...');
         const b=await fetchImageBuffer(s.u);
         if(b)slotBufs.push({buf:b,cap:s.cap});
       }
