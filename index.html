@@ -1,1796 +1,545 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Maintenance Dashboard - PEA C1</title>
-    <!--
-      Self-hosted vendor libraries (ดูขั้นตอนดาวน์โหลด/build ที่ vendor/README_DOWNLOAD_VENDOR_FILES.md
-      และ tailwind-build/README.md) — เดิมโหลดจาก CDN สาธารณะ (cdn.tailwindcss.com, jsdelivr,
-      unpkg, cdnjs) ซึ่งบางเครือข่ายองค์กร (เช่น PEA) บล็อกโดเมนพวกนี้ ทำให้หน้าเว็บช้า/พังเวลาเปิดจากใน
-      เครือข่ายนั้น เปลี่ยนมาเสิร์ฟจาก origin เดียวกับตัวเว็บเอง เหลือ external request จุดเดียวคือเรียก
-      Apps Script Web App ตอนดึงข้อมูลเท่านั้น
-    -->
-    <link rel="stylesheet" href="./vendor/tailwind.css">
-    <script src="./vendor/chart.umd.min.js"></script>
-    <script src="./vendor/vue.global.prod.js"></script>
-    <script src="./vendor/xlsx.full.min.js"></script>
-    <link rel="stylesheet" href="./vendor/fontawesome/css/all.min.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Project Equipment Report — AMR Asia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<?!= include("styles") ?>
 </head>
-<body class="bg-slate-100 font-sans text-slate-800">
+<body>
 
-    <div id="app" class="min-h-screen flex flex-col">
-
-        <!-- ==================== LOGIN SCREEN ==================== -->
-        <div v-if="!session" class="min-h-screen flex items-center justify-center bg-purple-900 p-4">
-            <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
-                <div class="text-center mb-6">
-                    <i class="fa-solid fa-tower-cell text-3xl text-purple-700"></i>
-                    <h1 class="font-bold text-slate-800 mt-2">Maintenance Dashboard</h1>
-                    <p class="text-xs text-slate-500">กฟภ. ภาคกลาง เขต 1 (กฟก.1)</p>
-                </div>
-                <div class="space-y-3">
-                    <div>
-                        <label class="text-xs font-bold text-slate-500">ชื่อผู้ใช้งาน</label>
-                        <input v-model="loginForm.username" @keyup.enter="submitLogin" type="text" class="w-full text-sm border border-slate-300 rounded-lg p-2 mt-1 focus:outline-none focus:border-purple-500">
-                    </div>
-                    <div>
-                        <label class="text-xs font-bold text-slate-500">รหัสผ่าน</label>
-                        <input v-model="loginForm.password" @keyup.enter="submitLogin" type="password" class="w-full text-sm border border-slate-300 rounded-lg p-2 mt-1 focus:outline-none focus:border-purple-500">
-                    </div>
-                    <p v-if="loginForm.error" class="text-xs text-red-600">{{ loginForm.error }}</p>
-                    <button @click="submitLogin" :disabled="loginForm.loading" class="w-full bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white text-sm font-medium py-2.5 rounded-lg transition">
-                        {{ loginForm.loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ' }}
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- ==================== MAIN DASHBOARD ==================== -->
-        <template v-else>
-        <header class="bg-purple-900 text-white shadow-lg sticky top-0 z-50">
-            <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center flex-wrap gap-2">
-                <div class="flex items-center space-x-3">
-                    <i class="fa-solid font-bold text-2xl fa-tower-cell text-amber-400"></i>
-                    <div>
-                        <h1 class="text-lg font-bold leading-tight">ระบบติดตามงานซ่อมบำรุงวิทยุสื่อสาร</h1>
-                        <p class="text-xs text-purple-200">กฟภ. ภาคกลาง เขต 1 (กฟก.1)</p>
-                    </div>
-                </div>
-                <div class="flex items-center space-x-3 text-sm bg-purple-800 px-3 py-1.5 rounded-lg">
-                    <i class="fa-solid fa-user-circle text-lg"></i>
-                    <div>
-                        <span class="font-semibold block leading-none">{{ session.displayName }}</span>
-                        <span class="text-[10px] text-amber-300 uppercase">{{ roleLabel(session.role) }}</span>
-                    </div>
-                    <button @click="doLogout" title="ออกจากระบบ" class="text-purple-200 hover:text-white ml-1">
-                        <i class="fa-solid fa-right-from-bracket"></i>
-                    </button>
-                </div>
-            </div>
-        </header>
-
-        <!-- ==================== NAV TABS ==================== -->
-        <nav class="bg-white border-b border-slate-200 sticky top-[57px] z-40">
-            <div class="max-w-7xl mx-auto px-4 flex gap-1">
-                <button @click="currentView = 'dashboard'"
-                        :class="currentView === 'dashboard' ? 'border-purple-600 text-purple-700' : 'border-transparent text-slate-500 hover:text-slate-700'"
-                        class="px-4 py-3 text-sm font-medium border-b-2 transition flex items-center">
-                    <i class="fa-solid fa-gauge mr-1.5"></i> แดชบอร์ด
-                </button>
-                <button v-if="session.role === 'admin'" @click="currentView = 'users'"
-                        :class="currentView === 'users' ? 'border-purple-600 text-purple-700' : 'border-transparent text-slate-500 hover:text-slate-700'"
-                        class="px-4 py-3 text-sm font-medium border-b-2 transition flex items-center">
-                    <i class="fa-solid fa-users-gear mr-1.5"></i> จัดการผู้ใช้งาน
-                </button>
-            </div>
-        </nav>
-
-        <main class="flex-1 max-w-7xl w-full mx-auto p-4 space-y-6">
-
-            <!-- CONNECTION ERROR BANNER -->
-            <div v-if="apiError" class="bg-red-50 border border-red-200 text-red-700 text-sm p-3 rounded-lg flex items-center">
-                <i class="fa-solid fa-triangle-exclamation mr-2"></i>
-                {{ apiError }}
-            </div>
-
-            <!-- ==================== DASHBOARD VIEW ==================== -->
-            <template v-if="currentView === 'dashboard'">
-
-            <!-- INITIAL LOAD: nothing for the first 1s (avoids a needless flash on a fast load), then a spinner if it's genuinely slow -->
-            <div v-if="initialLoading">
-                <div v-if="showInitialLoader" class="py-24 flex flex-col items-center justify-center text-slate-400">
-                    <i class="fa-solid fa-spinner fa-spin text-3xl text-purple-500 mb-3"></i>
-                    <p class="text-sm">กำลังโหลดข้อมูลแดชบอร์ด...</p>
-                </div>
-            </div>
-            <template v-else>
-
-            <!-- SLA OVERDUE BANNER -->
-            <div v-if="overdueCmCount > 0" class="bg-red-600 text-white text-sm font-bold p-3 rounded-lg">
-                มีงาน CM เกิน SLA อยู่ {{ overdueCmCount }} รายการ — กรุณาตรวจสอบด่วน
-            </div>
-
-            <!-- IMPORT / HISTORY TOOLBAR -->
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-wrap items-center gap-3 justify-between">
-                <div class="flex items-center gap-2">
-                    <label class="text-xs font-bold text-slate-500 uppercase">รอบข้อมูล</label>
-                    <select v-model="currentImportId" @change="onSelectImportRound" class="text-sm border border-slate-300 rounded-lg p-2 focus:outline-none focus:border-purple-500 min-w-[220px]">
-                        <option v-for="h in importHistory" :key="h.importId" :value="h.importId">
-                            {{ formatMonthYearThai(h.dataDate) }}
-                        </option>
-                    </select>
-                    <button @click="showTrend = !showTrend" class="text-xs px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 font-medium">
-                        <i class="fa-solid fa-chart-line mr-1"></i> {{ showTrend ? 'ซ่อนแนวโน้ม' : 'ดูแนวโน้มย้อนหลัง' }}
-                    </button>
-                    <a v-if="selectedImportExcelUrl" :href="selectedImportExcelUrl" target="_blank" class="text-xs px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 font-medium text-slate-600">
-                        <i class="fa-solid fa-file-excel mr-1 text-emerald-600"></i> ไฟล์ Excel ต้นฉบับของรอบนี้
-                    </a>
-                </div>
-                <div v-if="session.role === 'admin'" class="flex items-center gap-2">
-                    <input ref="fileInput" type="file" accept=".xlsx,.xls" class="hidden" @change="handleFileChange">
-                    <button @click="$refs.fileInput.click()" :disabled="importing"
-                            class="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-xs px-3 py-2 rounded-lg font-medium transition flex items-center">
-                        <i class="fa-solid" :class="importing ? 'fa-spinner fa-spin' : 'fa-file-import'"></i>
-                        <span class="ml-1">{{ importing ? 'กำลังนำเข้า...' : 'นำเข้าข้อมูล Excel' }}</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- TREND (ย้อนหลังเทียบหลายรอบ) -->
-            <div v-if="showTrend" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                <h2 class="text-sm font-bold text-slate-700 mb-4 flex items-center">
-                    <i class="fa-solid fa-chart-line mr-2 text-purple-600"></i> แนวโน้มเทียบแต่ละรอบข้อมูล
-                </h2>
-                <div class="relative h-56">
-                    <canvas id="trendChart"></canvas>
-                </div>
-            </div>
-
-            <!-- KPI SUMMARY CARDS: 1 การ์ดต่อประเภทอุปกรณ์ (BTS/DPC/MSO/...) จำนวนคอลัมน์เท่าจำนวนประเภทที่เจอจริง เพื่อให้อยู่แถวเดียวกันพอดีเสมอ -->
-            <div class="grid gap-4 grid-cols-[repeat(auto-fit,minmax(160px,1fr))]">
-                <div v-for="site in dashboard.sitesSummary" :key="site.type" class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs font-bold text-slate-500 uppercase">{{ site.type }}</span>
-                        <i class="fa-solid text-purple-600 text-lg" :class="'fa-' + (site.icon || 'microchip')"></i>
-                    </div>
-                    <div class="text-2xl font-extrabold text-slate-800">{{ site.count }} <span class="text-xs font-normal text-slate-500">{{ site.unit }}</span></div>
-                    <p class="text-[11px] text-emerald-600 mt-1"><i class="fa-solid fa-check-circle"></i> พร้อมใช้งานปกติ</p>
-                </div>
-                <div v-if="dashboard.sitesSummary.length === 0" class="col-span-full text-center text-sm text-slate-400 py-6">
-                    ยังไม่มีข้อมูล — นำเข้าไฟล์ Excel เพื่อเริ่มต้น
-                </div>
-            </div>
-
-            <!-- CHARTS -->
-            <div v-if="chartsError" class="bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg p-3">
-                <i class="fa-solid fa-triangle-exclamation mr-1.5"></i> วาดกราฟไม่สำเร็จ: {{ chartsError }}
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                    <div class="flex items-center justify-between mb-1">
-                        <h2 class="text-sm font-bold text-slate-700 flex items-center">
-                            <i class="fa-solid fa-chart-pie mr-2 text-purple-600"></i> สัดส่วนสถานะงานทั้งหมด (PM / CM)
-                        </h2>
-                        <button v-if="donutFilter !== 'all'" @click="resetDonut" class="text-[11px] text-purple-600 hover:underline">&larr; ดูทั้งหมด</button>
-                    </div>
-                    <div class="relative h-64">
-                        <canvas id="overallChart"></canvas>
-                    </div>
-                    <!-- legend เขียนเอง (ไม่ใช้ของ built-in ของ Chart.js) เพื่อให้ตอนกดปิดรายการ สีกับตัวอักษรจางลงแทนการขีดฆ่า -->
-                    <div id="overallChartLegend" class="flex flex-wrap gap-x-4 gap-y-1.5 justify-center mt-3"></div>
-                    <div v-if="!donutHasData" class="text-center text-sm text-slate-400 py-4">ไม่มีข้อมูลงาน PM/CM สำหรับรอบนี้ (ถ้ามั่นใจว่ามีข้อมูล ให้ตรวจหัวคอลัมน์ชีท CMTickets)</div>
-                </div>
-                <div class="md:col-span-2 bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-                        <h2 class="text-sm font-bold text-slate-700 flex items-center">
-                            <i class="fa-solid fa-chart-column mr-2 text-purple-600"></i> สถิติอุปกรณ์และสถานะงานแยกตามจังหวัด
-                        </h2>
-                        <div class="flex flex-wrap gap-2">
-                            <select v-model="provinceFilter" class="text-xs border border-slate-300 rounded-lg p-1.5 focus:outline-none">
-                                <option value="">ทุกจังหวัด</option>
-                                <option v-for="p in provinceOptions" :key="p" :value="p">{{ p }}</option>
-                            </select>
-                            <select v-model="siteFilter" :disabled="!provinceFilter" class="text-xs border border-slate-300 rounded-lg p-1.5 focus:outline-none disabled:opacity-50 disabled:bg-slate-50">
-                                <option value="">ทุกสถานที่</option>
-                                <option v-for="s in siteOptionsForProvince" :key="s" :value="s">{{ s }}</option>
-                            </select>
-                            <div class="flex text-xs border border-slate-300 rounded-lg overflow-hidden">
-                                <button @click="provinceViewMetric = 'cm'" :class="provinceViewMetric === 'cm' ? 'bg-purple-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'" class="px-3 py-1.5 font-medium transition">CM</button>
-                                <button @click="provinceViewMetric = 'pm'" :class="provinceViewMetric === 'pm' ? 'bg-purple-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'" class="px-3 py-1.5 font-medium transition border-l border-slate-300">PM</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="relative h-64">
-                        <canvas id="siteChart"></canvas>
-                    </div>
-                    <div v-if="provinceStats.bySite.length === 0" class="text-center text-sm text-slate-400 py-4">ไม่มีข้อมูลจังหวัด/สถานที่สำหรับรอบนี้ (มีเฉพาะรอบที่นำเข้าจากไฟล์รายงาน ReportWorkOrderStatus)</div>
-                </div>
-            </div>
-
-            <!-- CM WORK ORDERS -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="p-4 border-b border-slate-100 bg-slate-50">
-                    <div class="flex flex-wrap justify-between items-start gap-3">
-                        <div>
-                            <h2 class="font-bold text-slate-800 flex items-center">
-                                รายการแจ้งซ่อม CM (Corrective Maintenance)
-                            </h2>
-                        </div>
-                        <div class="flex gap-2">
-                            <button v-if="session.role === 'admin'" @click="openAddCmModal" class="text-xs px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-medium">
-                                <i class="fa-solid fa-plus mr-1"></i> เพิ่มรายการ
-                            </button>
-                            <a v-if="session.role === 'admin' && sheetLinks && sheetLinks.cmTickets" :href="sheetLinks.cmTickets" target="_blank" rel="noopener"
-                               title="เปิดชีท CMTickets ใน Google Sheet" class="text-xs px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-600 font-medium inline-flex items-center">
-                                <i class="fa-solid fa-table-cells mr-1.5 text-emerald-600"></i> เปิด Google Sheet
-                            </a>
-                            <select v-model="cmStatusFilter" class="text-xs border border-slate-300 rounded-lg p-1.5 focus:outline-none">
-                                <option value="">ทุกสถานะ</option>
-                                <option value="เกิน SLA">เกิน SLA</option>
-                                <option value="รอดำเนินการ">รอดำเนินการ</option>
-                                <option value="รออนุมัติ">รออนุมัติ</option>
-                                <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
-                                <option value="งาน PM">งาน PM</option>
-                                <option value="เสร็จสิ้น">เสร็จสิ้น</option>
-                            </select>
-                            <select v-model="cmProvinceFilter" class="text-xs border border-slate-300 rounded-lg p-1.5 focus:outline-none">
-                                <option value="">ทุกจังหวัด</option>
-                                <option v-for="p in cmProvinceOptions" :key="p" :value="p">{{ p }}</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse text-sm">
-                        <thead>
-                            <tr class="bg-slate-100 text-slate-600 text-xs uppercase border-b">
-                                <th class="p-3">Ticket ID</th>
-                                <th class="p-3">สถานที่ติดตั้งอุปกรณ์</th>
-                                <th class="p-3">อุปกรณ์ที่ขัดข้อง</th>
-                                <th class="p-3">เวลาที่รับแจ้ง</th>
-                                <th class="p-3">SLA คงเหลือ</th>
-                                <th class="p-3">สถานะ</th>
-                                <th v-if="session.role === 'admin'" class="p-3 text-center w-10"></th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100">
-                            <tr v-for="item in sortedCmTickets" :key="item.ticketId" class="hover:bg-slate-50">
-                                <td class="p-3 font-mono font-bold text-purple-700">
-                                    <button @click="openTicketDetail(item)" class="underline decoration-dotted hover:text-purple-900">{{ item.ticketId }}</button>
-                                </td>
-                                <td class="p-3"><span class="font-semibold block">{{ friendlySiteName(item.site) }}</span><span class="text-xs text-slate-400">{{ item.province || '-' }}</span></td>
-                                <td class="p-3"><span class="bg-slate-100 text-slate-700 text-xs px-2 py-0.5 rounded border border-slate-200">{{ item.system || '-' }}</span></td>
-                                <td class="p-3 text-xs text-slate-500">{{ item.reportedAt ? formatDateTime(item.reportedAt) : '-' }}</td>
-                                <td class="p-3">
-                                    <span v-if="item.slaDeadline || item.status === 'เสร็จสิ้น'" :class="getSlaBadgeClass(item)" class="px-2.5 py-1 rounded-full text-xs font-bold inline-flex items-center">
-                                        <i class="fa-regular fa-clock mr-1"></i> {{ formatSlaTime(item) }}
-                                    </span>
-                                    <span v-else class="text-slate-400 text-xs">-</span>
-                                </td>
-                                <td class="p-3">
-                                    <select v-if="session.role === 'admin'" v-model="item.status" @change="updateStatus(item)"
-                                            :class="getStatusBadgeClass(displayStatus(item))" class="text-xs px-2 py-1 rounded font-medium border-0 focus:outline-none">
-                                        <option value="รอดำเนินการ">รอดำเนินการ</option>
-                                        <option value="รออนุมัติ">รออนุมัติ</option>
-                                        <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
-                                        <option value="งาน PM">งาน PM</option>
-                                        <option value="เสร็จสิ้น">เสร็จสิ้น</option>
-                                    </select>
-                                    <span v-else :class="getStatusBadgeClass(displayStatus(item))" class="text-xs px-2 py-0.5 rounded font-medium">
-                                        {{ displayStatus(item) }}
-                                    </span>
-                                </td>
-                                <td v-if="session.role === 'admin'" class="p-3 text-center">
-                                    <button @click="openEditCmModal(item)" title="แก้ไขข้อมูลใบงานนี้" class="text-slate-300 hover:text-purple-600 transition">
-                                        <i class="fa-solid fa-gear"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                            <tr v-if="sortedCmTickets.length === 0">
-                                <td colspan="7" class="p-6 text-center text-sm text-slate-400">ไม่มีใบงาน CM ตรงตามเงื่อนไขที่เลือก</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- INSTALLATION SITES -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                    <div>
-                        <h2 class="font-bold text-slate-800 flex items-center">
-                            <i class="fa-solid fa-list text-purple-600 mr-2"></i> รายการสถานที่ติดตั้งอุปกรณ์ระบบวิทยุสื่อสารแบบ Digital กฟก.1
-                        </h2>
-                    </div>
-                    <div class="w-64">
-                        <input v-model="searchQuery" type="text" placeholder="ค้นหาสถานที่/อุปกรณ์..." class="w-full text-xs p-2 border border-slate-300 rounded-lg focus:outline-none focus:border-purple-500">
-                    </div>
-                </div>
-                <div class="overflow-x-auto max-h-80">
-                    <table class="w-full text-left border-collapse text-xs">
-                        <thead class="sticky top-0 bg-slate-100 text-slate-600 uppercase border-b">
-                            <tr>
-                                <th class="p-2.5 text-center w-12">ลำดับ</th>
-                                <th class="p-2.5">สถานที่ติดตั้งอุปกรณ์</th>
-                                <th class="p-2.5">จังหวัด</th>
-                                <th class="p-2.5">อุปกรณ์ที่ติดตั้ง</th>
-                                <th class="p-2.5 text-center w-24">จำนวน (ชุด)</th>
-                                <th v-if="session.role === 'admin'" class="p-2.5 text-center w-10"></th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100">
-                            <tr v-for="item in filteredInstallationSites" :key="item.no" class="hover:bg-slate-50">
-                                <td class="p-2.5 text-center font-bold text-slate-400">{{ item.no }}</td>
-                                <td class="p-2.5 font-medium text-slate-800">{{ friendlySiteName(item.location) }}</td>
-                                <td class="p-2.5 text-slate-600">{{ item.province || '-' }}</td>
-                                <td class="p-2.5 text-slate-600"><span class="bg-purple-50 text-purple-700 px-2 py-0.5 rounded border border-purple-100">{{ item.equipment }}</span></td>
-                                <td class="p-2.5 text-center font-bold text-slate-700">{{ item.quantity }}</td>
-                                <td v-if="session.role === 'admin'" class="p-2.5 text-center">
-                                    <button @click="openEditSiteModal(item)" title="แก้ไข" class="text-slate-300 hover:text-purple-600 transition">
-                                        <i class="fa-solid fa-gear"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- PM STATUS & REPORT LIBRARY -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                    <h2 class="font-bold text-slate-800 mb-3 flex items-center">
-                        <i class="fa-solid fa-list-check text-emerald-600 mr-2"></i> สถานะแผนงานบำรุงรักษา PM (รายไตรมาส)
-                    </h2>
-                    <div class="space-y-4">
-                        <div v-for="pm in dashboard.pmStatus" :key="pm.quarter" class="border border-slate-100 p-3 rounded-lg bg-slate-50">
-                            <div class="flex justify-between text-xs font-bold mb-1">
-                                <span>{{ pm.quarter }}</span>
-                                <span :class="pm.percent === 100 ? 'text-emerald-600' : 'text-amber-600'">{{ pm.percent }}% เสร็จสิ้น</span>
-                            </div>
-                            <div class="w-full bg-slate-200 rounded-full h-2">
-                                <div class="bg-emerald-500 h-2 rounded-full" :style="{ width: pm.percent + '%' }"></div>
-                            </div>
-                            <div class="flex justify-between text-[11px] text-slate-400 mt-2">
-                                <span>เสร็จแล้ว {{ pm.done }}/{{ pm.total }} จุด</span>
-                                <span>{{ pm.period }}</span>
-                            </div>
-                        </div>
-                        <div v-if="dashboard.pmStatus.length === 0" class="text-center text-sm text-slate-400 py-4">ไม่มีข้อมูล PM ในรอบนี้</div>
-                    </div>
-                </div>
-
-                <!-- คลังไฟล์รายงาน -->
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                    <div class="flex justify-between items-center mb-3">
-                        <h2 class="font-bold text-slate-800 flex items-center">
-                            <i class="fa-solid fa-cloud-arrow-down text-blue-600 mr-2"></i> รายงานการซ่อมบำรุง
-                        </h2>
-                        <div class="flex items-center gap-1.5">
-                            <select v-model.number="reportYear" @change="loadReportFiles" class="text-xs border border-slate-300 rounded-lg p-1.5 focus:outline-none">
-                                <option v-for="y in reportYearOptions" :key="y" :value="y">ปี {{ y }}</option>
-                            </select>
-                            <select v-model="reportMonth" @change="loadReportFiles" class="text-xs border border-slate-300 rounded-lg p-1.5 focus:outline-none">
-                                <option value="">ทั้งปี</option>
-                                <option v-for="(m, idx) in thaiMonths" :key="idx" :value="idx + 1">{{ m }}</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="space-y-2 max-h-72 overflow-y-auto">
-                        <div v-for="report in reportFiles" :key="report.fileId" class="flex justify-between items-center p-2.5 hover:bg-slate-50 rounded border border-slate-100 text-xs">
-                            <div class="flex items-center space-x-2 min-w-0">
-                                <i :class="report.type === 'PDF' ? 'fa-file-pdf text-red-500' : 'fa-file-excel text-emerald-600'" class="text-base"></i>
-                                <div class="min-w-0">
-                                    <span class="font-medium text-slate-700 block truncate">{{ report.name }}</span>
-                                    <span class="text-[10px] text-slate-400">{{ formatDate(report.dateCreated) }} | {{ report.size }}</span>
-                                </div>
-                            </div>
-                            <a :href="report.url" target="_blank" class="bg-slate-100 hover:bg-purple-100 text-purple-700 px-2.5 py-1 rounded text-xs transition shrink-0 ml-2">
-                                <i class="fa-solid fa-download mr-1"></i> ดาวน์โหลด
-                            </a>
-                        </div>
-                        <div v-if="reportFiles.length === 0" class="text-center text-sm text-slate-400 py-4">ไม่พบไฟล์ในช่วงเวลาที่เลือก</div>
-                    </div>
-                </div>
-            </div>
-
-            </template>
-            </template>
-            <!-- ==================== END DASHBOARD VIEW ==================== -->
-
-            <!-- TICKET DETAIL MODAL (shared across views) -->
-            <div v-if="showTicketModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="closeTicketModal">
-                <div class="bg-white rounded-xl shadow-lg max-w-lg w-full max-h-[85vh] overflow-y-auto">
-                    <div class="p-4 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white">
-                        <h3 class="font-bold text-slate-800">รายละเอียดใบงาน</h3>
-                        <button @click="closeTicketModal" class="text-slate-400 hover:text-slate-700 text-sm font-bold">ปิด</button>
-                    </div>
-                    <div class="p-4 text-sm">
-                        <div v-if="ticketDetailLoading" class="text-center text-slate-400 py-8">กำลังโหลด...</div>
-                        <div v-else-if="!ticketDetail" class="text-center text-slate-400 py-8">
-                            ไม่มีรายละเอียดเพิ่มเติมสำหรับใบงานนี้ (รอบนี้นำเข้าด้วย template แบบเดิม ซึ่งไม่มีข้อมูลสาเหตุ/วิธีแก้/ช่างเก็บไว้)
-                        </div>
-                        <dl v-else class="space-y-2.5">
-                            <div class="flex justify-between border-b border-slate-50 pb-2"><dt class="text-slate-400">ใบสั่งงาน</dt><dd class="font-bold font-mono">{{ ticketDetail.workOrderNo }}</dd></div>
-                            <div class="flex justify-between border-b border-slate-50 pb-2"><dt class="text-slate-400">เลขที่คำร้อง</dt><dd>{{ ticketDetail.requestNo || '-' }}</dd></div>
-                            <div class="flex justify-between border-b border-slate-50 pb-2"><dt class="text-slate-400">ประเภทงาน</dt><dd>{{ ticketDetail.jobType }}</dd></div>
-                            <div class="flex justify-between border-b border-slate-50 pb-2"><dt class="text-slate-400">สถานที่</dt><dd class="text-right">{{ ticketDetail.site }}</dd></div>
-                            <div class="flex justify-between border-b border-slate-50 pb-2"><dt class="text-slate-400">จังหวัด</dt><dd>{{ ticketDetail.province }}</dd></div>
-                            <div class="flex justify-between border-b border-slate-50 pb-2"><dt class="text-slate-400">รหัสอุปกรณ์</dt><dd class="font-mono">{{ ticketDetail.equipmentCode }}</dd></div>
-                            <div class="border-b border-slate-50 pb-2"><dt class="text-slate-400 mb-1">รายละเอียดการแจ้งซ่อม</dt><dd>{{ ticketDetail.faultDescription || '-' }}</dd></div>
-                            <div class="border-b border-slate-50 pb-2"><dt class="text-slate-400 mb-1">สาเหตุ</dt><dd>{{ ticketDetail.cause || '-' }}</dd></div>
-                            <div class="border-b border-slate-50 pb-2"><dt class="text-slate-400 mb-1">การแก้ไขปัญหา</dt><dd>{{ ticketDetail.solution || '-' }}</dd></div>
-                            <div v-if="ticketDetail.holdDetail" class="border-b border-slate-50 pb-2"><dt class="text-slate-400 mb-1">รายละเอียดการพัก/อื่นๆ</dt><dd>{{ ticketDetail.holdDetail }}</dd></div>
-                            <div class="flex justify-between border-b border-slate-50 pb-2"><dt class="text-slate-400">พนักงาน</dt><dd class="text-right">{{ ticketDetail.staff || '-' }}</dd></div>
-                            <div class="flex justify-between border-b border-slate-50 pb-2"><dt class="text-slate-400">วันที่แจ้ง</dt><dd>{{ formatDateTime(ticketDetail.reportedAt) }}</dd></div>
-                            <div class="flex justify-between"><dt class="text-slate-400">วันที่เสร็จสิ้น</dt><dd>{{ ticketDetail.completedAt ? formatDateTime(ticketDetail.completedAt) : '-' }}</dd></div>
-                        </dl>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ADD CM TICKET MODAL (admin only) -->
-            <div v-if="showAddCmModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="closeAddCmModal">
-                <div class="bg-white rounded-xl shadow-lg max-w-md w-full max-h-[85vh] overflow-y-auto">
-                    <div class="p-4 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white">
-                        <h3 class="font-bold text-slate-800">เพิ่มรายการแจ้งซ่อม CM</h3>
-                        <button @click="closeAddCmModal" class="text-slate-400 hover:text-slate-700 text-sm font-bold">ปิด</button>
-                    </div>
-                    <div class="p-4 text-sm space-y-3">
-                        <div>
-                            <label class="text-xs font-bold text-slate-500">Ticket ID</label>
-                            <input v-model="addCmForm.ticketId" type="text" class="w-full text-sm border border-slate-300 rounded-lg p-2 mt-1 focus:outline-none focus:border-purple-500">
-                        </div>
-                        <div class="relative">
-                            <label class="text-xs font-bold text-slate-500">สถานที่ติดตั้งอุปกรณ์</label>
-                            <input v-model="addCmForm.site" type="text" autocomplete="off"
-                                   @focus="addCmForm.siteSuggestOpen = true" @blur="addCmForm.siteSuggestOpen = false"
-                                   class="w-full text-sm border border-slate-300 rounded-lg p-2 mt-1 focus:outline-none focus:border-purple-500">
-                            <div v-if="addCmForm.siteSuggestOpen && matchSuggestions(siteNameOptions, addCmForm.site).length"
-                                 class="absolute z-10 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                <button type="button" v-for="opt in matchSuggestions(siteNameOptions, addCmForm.site)" :key="opt"
-                                        @mousedown.prevent="addCmForm.site = opt; addCmForm.siteSuggestOpen = false"
-                                        class="block w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-purple-50 hover:text-purple-700">{{ opt }}</button>
-                            </div>
-                        </div>
-                        <div class="relative">
-                            <label class="text-xs font-bold text-slate-500">จังหวัด</label>
-                            <input v-model="addCmForm.province" type="text" autocomplete="off"
-                                   @focus="addCmForm.provinceSuggestOpen = true" @blur="addCmForm.provinceSuggestOpen = false"
-                                   class="w-full text-sm border border-slate-300 rounded-lg p-2 mt-1 focus:outline-none focus:border-purple-500">
-                            <div v-if="addCmForm.provinceSuggestOpen && matchSuggestions(provinceOptions, addCmForm.province).length"
-                                 class="absolute z-10 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                <button type="button" v-for="opt in matchSuggestions(provinceOptions, addCmForm.province)" :key="opt"
-                                        @mousedown.prevent="addCmForm.province = opt; addCmForm.provinceSuggestOpen = false"
-                                        class="block w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-purple-50 hover:text-purple-700">{{ opt }}</button>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="text-xs font-bold text-slate-500">อุปกรณ์ที่ขัดข้อง</label>
-                            <input v-model="addCmForm.system" type="text" class="w-full text-sm border border-slate-300 rounded-lg p-2 mt-1 focus:outline-none focus:border-purple-500">
-                        </div>
-                        <div>
-                            <label class="text-xs font-bold text-slate-500">เวลาที่รับแจ้ง</label>
-                            <input v-model="addCmForm.reportedAt" type="datetime-local" class="w-full text-sm border border-slate-300 rounded-lg p-2 mt-1 focus:outline-none focus:border-purple-500">
-                        </div>
-                        <div>
-                            <label class="text-xs font-bold text-slate-500">สถานะ</label>
-                            <select v-model="addCmForm.status" class="w-full text-sm border border-slate-300 rounded-lg p-2 mt-1 focus:outline-none focus:border-purple-500">
-                                <option value="รอดำเนินการ">รอดำเนินการ</option>
-                                <option value="รออนุมัติ">รออนุมัติ</option>
-                                <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
-                                <option value="งาน PM">งาน PM</option>
-                                <option value="เสร็จสิ้น">เสร็จสิ้น</option>
-                            </select>
-                        </div>
-                        <p v-if="addCmForm.error" class="text-xs text-red-600">{{ addCmForm.error }}</p>
-                        <button @click="submitAddCmTicket" :disabled="addCmForm.saving" class="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-xs font-medium py-2.5 rounded-lg transition">
-                            {{ addCmForm.saving ? 'กำลังบันทึก...' : 'บันทึก' }}
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- EDIT INSTALLATION SITE MODAL (admin only) -->
-            <div v-if="showEditSiteModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="closeEditSiteModal">
-                <div class="bg-white rounded-xl shadow-lg max-w-md w-full">
-                    <div class="p-4 border-b border-slate-100 flex justify-between items-center">
-                        <h3 class="font-bold text-slate-800">แก้ไขสถานที่ติดตั้ง</h3>
-                        <button @click="closeEditSiteModal" class="text-slate-400 hover:text-slate-700 text-sm font-bold">ปิด</button>
-                    </div>
-                    <div class="p-4 text-sm space-y-3">
-                        <div class="relative">
-                            <label class="text-xs font-bold text-slate-500">สถานที่ติดตั้งอุปกรณ์</label>
-                            <input v-model="editSiteForm.location" type="text" autocomplete="off"
-                                   @focus="editSiteForm.locationSuggestOpen = true" @blur="editSiteForm.locationSuggestOpen = false"
-                                   class="w-full text-sm border border-slate-300 rounded-lg p-2 mt-1 focus:outline-none focus:border-purple-500">
-                            <div v-if="editSiteForm.locationSuggestOpen && matchSuggestions(siteNameOptions, editSiteForm.location).length"
-                                 class="absolute z-10 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                <button type="button" v-for="opt in matchSuggestions(siteNameOptions, editSiteForm.location)" :key="opt"
-                                        @mousedown.prevent="editSiteForm.location = opt; editSiteForm.locationSuggestOpen = false"
-                                        class="block w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-purple-50 hover:text-purple-700">{{ opt }}</button>
-                            </div>
-                        </div>
-                        <div class="relative">
-                            <label class="text-xs font-bold text-slate-500">จังหวัด</label>
-                            <input v-model="editSiteForm.province" type="text" autocomplete="off"
-                                   @focus="editSiteForm.provinceSuggestOpen = true" @blur="editSiteForm.provinceSuggestOpen = false"
-                                   class="w-full text-sm border border-slate-300 rounded-lg p-2 mt-1 focus:outline-none focus:border-purple-500">
-                            <div v-if="editSiteForm.provinceSuggestOpen && matchSuggestions(provinceOptions, editSiteForm.province).length"
-                                 class="absolute z-10 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                <button type="button" v-for="opt in matchSuggestions(provinceOptions, editSiteForm.province)" :key="opt"
-                                        @mousedown.prevent="editSiteForm.province = opt; editSiteForm.provinceSuggestOpen = false"
-                                        class="block w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-purple-50 hover:text-purple-700">{{ opt }}</button>
-                            </div>
-                        </div>
-                        <p v-if="editSiteForm.error" class="text-xs text-red-600">{{ editSiteForm.error }}</p>
-                        <button @click="submitEditSite" :disabled="editSiteForm.saving" class="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-xs font-medium py-2.5 rounded-lg transition">
-                            {{ editSiteForm.saving ? 'กำลังบันทึก...' : 'บันทึก' }}
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- EDIT CM TICKET MODAL (admin only) -->
-            <div v-if="showEditCmModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="closeEditCmModal">
-                <div class="bg-white rounded-xl shadow-lg max-w-md w-full max-h-[85vh] overflow-y-auto">
-                    <div class="p-4 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white">
-                        <h3 class="font-bold text-slate-800">แก้ไขใบงาน CM — {{ editCmForm.ticketId }}</h3>
-                        <button @click="closeEditCmModal" class="text-slate-400 hover:text-slate-700 text-sm font-bold">ปิด</button>
-                    </div>
-                    <div class="p-4 text-sm space-y-3">
-                        <div class="relative">
-                            <label class="text-xs font-bold text-slate-500">สถานที่ติดตั้งอุปกรณ์</label>
-                            <input v-model="editCmForm.site" type="text" autocomplete="off"
-                                   @focus="editCmForm.siteSuggestOpen = true" @blur="editCmForm.siteSuggestOpen = false"
-                                   class="w-full text-sm border border-slate-300 rounded-lg p-2 mt-1 focus:outline-none focus:border-purple-500">
-                            <div v-if="editCmForm.siteSuggestOpen && matchSuggestions(siteNameOptions, editCmForm.site).length"
-                                 class="absolute z-10 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                <button type="button" v-for="opt in matchSuggestions(siteNameOptions, editCmForm.site)" :key="opt"
-                                        @mousedown.prevent="editCmForm.site = opt; editCmForm.siteSuggestOpen = false"
-                                        class="block w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-purple-50 hover:text-purple-700">{{ opt }}</button>
-                            </div>
-                        </div>
-                        <div class="relative">
-                            <label class="text-xs font-bold text-slate-500">จังหวัด</label>
-                            <input v-model="editCmForm.province" type="text" autocomplete="off"
-                                   @focus="editCmForm.provinceSuggestOpen = true" @blur="editCmForm.provinceSuggestOpen = false"
-                                   class="w-full text-sm border border-slate-300 rounded-lg p-2 mt-1 focus:outline-none focus:border-purple-500">
-                            <div v-if="editCmForm.provinceSuggestOpen && matchSuggestions(provinceOptions, editCmForm.province).length"
-                                 class="absolute z-10 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                <button type="button" v-for="opt in matchSuggestions(provinceOptions, editCmForm.province)" :key="opt"
-                                        @mousedown.prevent="editCmForm.province = opt; editCmForm.provinceSuggestOpen = false"
-                                        class="block w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-purple-50 hover:text-purple-700">{{ opt }}</button>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="text-xs font-bold text-slate-500">อุปกรณ์ที่ขัดข้อง</label>
-                            <input v-model="editCmForm.system" type="text" class="w-full text-sm border border-slate-300 rounded-lg p-2 mt-1 focus:outline-none focus:border-purple-500">
-                        </div>
-                        <div>
-                            <label class="text-xs font-bold text-slate-500">เวลาที่รับแจ้ง</label>
-                            <input v-model="editCmForm.reportedAt" type="datetime-local" class="w-full text-sm border border-slate-300 rounded-lg p-2 mt-1 focus:outline-none focus:border-purple-500">
-                        </div>
-                        <div>
-                            <label class="text-xs font-bold text-slate-500">สถานะ</label>
-                            <select v-model="editCmForm.status" class="w-full text-sm border border-slate-300 rounded-lg p-2 mt-1 focus:outline-none focus:border-purple-500">
-                                <option value="รอดำเนินการ">รอดำเนินการ</option>
-                                <option value="รออนุมัติ">รออนุมัติ</option>
-                                <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
-                                <option value="งาน PM">งาน PM</option>
-                                <option value="เสร็จสิ้น">เสร็จสิ้น</option>
-                            </select>
-                        </div>
-                        <p v-if="editCmForm.error" class="text-xs text-red-600">{{ editCmForm.error }}</p>
-                        <button @click="submitEditCmTicket" :disabled="editCmForm.saving" class="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-xs font-medium py-2.5 rounded-lg transition">
-                            {{ editCmForm.saving ? 'กำลังบันทึก...' : 'บันทึก' }}
-                        </button>
-                        <a v-if="sheetLinks && sheetLinks.cmTickets" :href="sheetLinks.cmTickets" target="_blank" rel="noopener"
-                           class="block text-center text-xs text-purple-600 hover:underline pt-1">
-                            <i class="fa-solid fa-up-right-from-square mr-1"></i> หรือแก้ไขแถวนี้โดยตรงใน Google Sheet
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ==================== USER MANAGEMENT VIEW (Admin only) ==================== -->
-            <template v-if="currentView === 'users' && session.role === 'admin'">
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                <h2 class="font-bold text-slate-800 mb-4 flex items-center">
-                    <i class="fa-solid fa-users-gear text-purple-600 mr-2"></i> จัดการผู้ใช้งาน
-                </h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="space-y-3 flex flex-col">
-                        <p class="text-xs font-bold text-slate-500 uppercase">นำเข้า / ส่งออก จาก Excel</p>
-                        <div @dragover.prevent="userImport.dragOver = true"
-                             @dragleave.prevent="userImport.dragOver = false"
-                             @drop.prevent="handleUserImportDrop"
-                             @click="$refs.userImportInput.click()"
-                             :class="userImport.dragOver ? 'border-purple-500 bg-purple-50' : 'border-slate-300'"
-                             class="border-2 border-dashed rounded-lg p-5 text-center cursor-pointer transition flex-1 flex flex-col items-center justify-center">
-                            <input ref="userImportInput" type="file" accept=".xlsx,.xls" class="hidden" @change="handleUserImportChange">
-                            <i class="fa-solid text-2xl text-purple-500 mb-2" :class="userImport.importing ? 'fa-spinner fa-spin' : 'fa-file-excel'"></i>
-                            <p class="text-sm text-slate-600">{{ userImport.importing ? 'กำลังนำเข้า...' : 'ลากไฟล์ Excel มาวาง หรือคลิกเพื่อแนบไฟล์' }}</p>
-                            <p class="text-xs text-slate-400 mt-1">ใช้แบบฟอร์มเปล่าด้านล่าง กรอกแล้วนำเข้าได้เลย</p>
-                        </div>
-                        <p v-if="userImport.error" class="text-xs text-red-600">{{ userImport.error }}</p>
-                        <div v-if="userImport.result" class="text-xs rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 p-2.5">
-                            นำเข้าสำเร็จ {{ userImport.result.created }} รายการ
-                            <span v-if="userImport.result.skipped.length">, ข้าม {{ userImport.result.skipped.length }} รายการ</span>
-                            <ul v-if="userImport.result.skipped.length" class="mt-1 list-disc list-inside space-y-0.5">
-                                <li v-for="s in userImport.result.skipped" :key="s.row">แถว {{ s.row }} ({{ s.username || '-' }}): {{ s.reason }}</li>
-                            </ul>
-                        </div>
-                        <div class="flex gap-2">
-                            <button @click="downloadUserTemplate" class="flex-1 text-xs px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 font-medium text-slate-600">
-                                <i class="fa-solid fa-download mr-1"></i> แบบฟอร์มเปล่า (.xlsx)
-                            </button>
-                            <button @click="exportUsers" class="flex-1 text-xs px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 font-medium text-slate-600">
-                                <i class="fa-solid fa-file-export mr-1"></i> รายชื่อ User ทั้งหมด (.xlsx)
-                            </button>
-                        </div>
-                    </div>
-                    <div class="space-y-2 border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-6">
-                        <p class="text-xs font-bold text-slate-500 uppercase">เพิ่มผู้ใช้งานทีละคน</p>
-                        <input v-model="newUserForm.displayName" type="text" placeholder="ชื่อที่แสดง" class="w-full text-sm border border-slate-300 rounded-lg p-2 focus:outline-none focus:border-purple-500">
-                        <input v-model="newUserForm.username" type="text" placeholder="ชื่อผู้ใช้งาน (username)" class="w-full text-sm border border-slate-300 rounded-lg p-2 focus:outline-none focus:border-purple-500">
-                        <input v-model="newUserForm.password" type="password" placeholder="รหัสผ่าน" class="w-full text-sm border border-slate-300 rounded-lg p-2 focus:outline-none focus:border-purple-500">
-                        <select v-model="newUserForm.role" class="w-full text-sm border border-slate-300 rounded-lg p-2 focus:outline-none focus:border-purple-500">
-                            <option value="pea">เจ้าหน้าที่ PEA (ดูอย่างเดียว)</option>
-                            <option value="admin">ผู้ดูแลระบบ (ทำได้ทุกอย่าง)</option>
-                        </select>
-                        <p v-if="newUserForm.error" class="text-xs text-red-600">{{ newUserForm.error }}</p>
-                        <button @click="submitNewUser" :disabled="newUserForm.saving" class="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-xs font-medium py-2.5 rounded-lg transition">
-                            {{ newUserForm.saving ? 'กำลังบันทึก...' : 'เพิ่มผู้ใช้งาน' }}
-                        </button>
-                    </div>
-                </div>
-
-                <div class="mt-6">
-                    <p class="text-xs font-bold text-slate-500 uppercase mb-2">ตาราง User ทั้งหมด</p>
-                    <div class="overflow-x-auto border border-slate-200 rounded-lg">
-                        <table class="w-full text-sm">
-                            <thead class="bg-slate-50 text-xs text-slate-500 uppercase">
-                                <tr>
-                                    <th class="text-left p-2.5">ชื่อผู้ใช้งาน</th>
-                                    <th class="text-left p-2.5">ชื่อที่แสดง</th>
-                                    <th class="text-left p-2.5">สิทธิ์</th>
-                                    <th class="text-center p-2.5 w-16">จัดการ</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="row in userRows" :key="row.username" class="border-t border-slate-100">
-                                    <td class="p-2.5 text-slate-500">{{ row.username }}</td>
-                                    <td class="p-2.5 text-slate-700">{{ row.displayName }}</td>
-                                    <td class="p-2.5">
-                                        <span class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-600">{{ roleLabel(row.role) }}</span>
-                                    </td>
-                                    <td class="p-2.5 text-center">
-                                        <!-- ปุ่มฟันเฟือง (theme เดียวกับปุ่มแก้ไขของตารางอื่นในเว็บ เช่น รายการ CM/สถานที่ติดตั้ง)
-                                             เปิด pop-up แก้ไขแทนการแก้ตรงในตารางแบบเดิม — บัญชี admin หลักแก้/ลบไม่ได้เหมือนเดิม -->
-                                        <button v-if="row.role !== 'admin'" @click="openEditUserModal(row)" title="แก้ไขผู้ใช้งาน" class="text-slate-300 hover:text-purple-600 transition">
-                                            <i class="fa-solid fa-gear"></i>
-                                        </button>
-                                        <span v-else class="text-xs text-slate-300"><i class="fa-solid fa-lock" title="บัญชีนี้ป้องกันไว้"></i></span>
-                                    </td>
-                                </tr>
-                                <tr v-if="userRows.length === 0">
-                                    <td colspan="4" class="text-sm text-slate-400 text-center py-4">ยังไม่มีผู้ใช้งาน</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            </template>
-            <!-- ==================== END USER MANAGEMENT VIEW ==================== -->
-
-            <!-- pop-up แก้ไขผู้ใช้งาน (ชื่อที่แสดง/สิทธิ์/รหัสผ่านใหม่) เปิดจากปุ่มฟันเฟืองในตาราง -->
-            <div v-if="showEditUserModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="closeEditUserModal">
-                <div class="bg-white rounded-xl shadow-lg max-w-sm w-full relative">
-                    <button @click="closeEditUserModal" title="ปิด" class="absolute top-3.5 right-3.5 text-slate-400 hover:text-slate-700 transition">
-                        <i class="fa-solid fa-xmark text-lg"></i>
-                    </button>
-                    <div class="p-5">
-                        <h3 class="font-bold text-slate-800 mb-0.5 flex items-center pr-6">
-                            <i class="fa-solid fa-user-gear text-purple-600 mr-2"></i> แก้ไขผู้ใช้งาน
-                        </h3>
-                        <p class="text-xs text-slate-400 mb-4">ชื่อผู้ใช้งาน: <span class="text-slate-600 font-medium">{{ editUserForm.username }}</span></p>
-                        <div class="space-y-3">
-                            <div>
-                                <label class="text-xs font-bold text-slate-500">ชื่อที่แสดง</label>
-                                <input v-model="editUserForm.displayName" type="text" class="w-full text-sm border border-slate-300 rounded-lg p-2 mt-1 focus:outline-none focus:border-purple-500">
-                            </div>
-                            <div>
-                                <label class="text-xs font-bold text-slate-500">สิทธิ์</label>
-                                <select v-model="editUserForm.role" class="w-full text-sm border border-slate-300 rounded-lg p-2 mt-1 focus:outline-none focus:border-purple-500">
-                                    <option value="pea">เจ้าหน้าที่ PEA</option>
-                                    <option value="admin">ผู้ดูแลระบบ</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="text-xs font-bold text-slate-500">รหัสผ่านใหม่</label>
-                                <input v-model="editUserForm.password" type="password" placeholder="เว้นว่าง = ไม่เปลี่ยน" class="w-full text-sm border border-slate-300 rounded-lg p-2 mt-1 focus:outline-none focus:border-purple-500">
-                            </div>
-                            <p v-if="editUserForm.error" class="text-xs text-red-600">{{ editUserForm.error }}</p>
-                        </div>
-                        <div class="flex items-center justify-between mt-5 pt-4 border-t border-slate-100">
-                            <button @click="openDeleteUserConfirm" class="text-xs px-3 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 font-medium">
-                                <i class="fa-solid fa-trash mr-1.5"></i> ลบผู้ใช้งาน
-                            </button>
-                            <button @click="saveEditUserModal" :disabled="editUserForm.saving" class="text-xs px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-medium">
-                                {{ editUserForm.saving ? 'กำลังบันทึก...' : 'บันทึก' }}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- pop-up ยืนยันลบ (ซ้อนอยู่บน pop-up แก้ไขผู้ใช้งาน — z-[60] สูงกว่า) ปุ่มยืนยันอยู่ขวา ยกเลิกอยู่ซ้าย ตามที่ขอ -->
-            <div v-if="showDeleteUserConfirm" class="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4" @click.self="closeDeleteUserConfirm">
-                <div class="bg-white rounded-xl shadow-lg max-w-xs w-full relative p-5">
-                    <button @click="closeDeleteUserConfirm" title="ปิด" class="absolute top-3.5 right-3.5 text-slate-400 hover:text-slate-700 transition">
-                        <i class="fa-solid fa-xmark text-lg"></i>
-                    </button>
-                    <h3 class="font-bold text-slate-800 mb-2 flex items-center pr-6">
-                        <i class="fa-solid fa-triangle-exclamation text-red-500 mr-2"></i> ยืนยันการลบ
-                    </h3>
-                    <p class="text-sm text-slate-600 mb-5">ต้องการลบผู้ใช้งาน "{{ editUserForm.displayName }}" ({{ editUserForm.username }}) ใช่หรือไม่? การลบไม่สามารถย้อนกลับได้</p>
-                    <p v-if="deleteUserError" class="text-xs text-red-600 mb-3">{{ deleteUserError }}</p>
-                    <div class="flex items-center gap-3">
-                        <button @click="closeDeleteUserConfirm" class="flex-1 text-xs px-3 py-2.5 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-600 font-medium">
-                            ยกเลิก
-                        </button>
-                        <button @click="deleteUserConfirmed" :disabled="deletingUser" class="flex-1 text-xs px-3 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-medium">
-                            {{ deletingUser ? 'กำลังลบ...' : 'ยืนยันลบ' }}
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <!-- ==================== END USER MANAGEMENT POP-UPS ==================== -->
-
-        </main>
-        </template>
+<!-- ══════════════════════ AUTH GATE ══════════════════════ -->
+<div id="authGate">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="auth-logo-box" id="authLogoBox">
+        <!-- Logo injected by JS after it loads successfully -->
+        <span class="auth-logo-fallback" id="authLogoFallback">AMR ASIA</span>
+      </div>
+      <div class="info">
+        <h2>Sign In</h2>
+        <div class="sub">AMR Inspection · OMD</div>
+      </div>
     </div>
+    <label for="authUser">Username</label>
+    <input type="text" class="tin" id="authUser" autocomplete="off" placeholder="username">
+    <label for="authPass">Password</label>
+    <div class="auth-pw">
+      <input type="password" class="tin" id="authPass" autocomplete="current-password" placeholder="••••••••">
+      <span class="eye" id="authEye">Show</span>
+    </div>
+    <div class="auth-err" id="authErr"></div>
+    <button class="auth-btn" id="authBtn">Sign In</button>
+    <div class="auth-foot">AMR ASIA CO., LTD. · Equipment Inspection System</div>
+  </div>
+</div>
 
-    <script>
-        const { createApp } = Vue;
+<!-- ══════════════════════ PDPA ════════════════════════════ -->
+<div id="pdpaBanner">
+  <div class="pd-head"><div class="pd-ic">🛡</div><b>Privacy &amp; Personal Data</b></div>
+  <div class="pd-body">
+    This system records your usage data for auditing and maintenance purposes.
+    <a id="pdpaToggle">View details</a>
+    <div class="pd-extra" id="pdpaExtra">Data collected: username, role, login time, inspection records and equipment photos, in accordance with the Personal Data Protection Act B.E. 2562 (2019).</div>
+  </div>
+  <div class="pd-actions">
+    <button class="pd-btn pd-detail" id="pdpaDetailBtn">Details</button>
+    <button class="pd-btn pd-accept" id="pdpaAccept">Accept</button>
+  </div>
+</div>
 
-        /**
-         * Legend แบบเขียนเอง (HTML ธรรมดา ไม่ใช่ของ built-in ของ Chart.js) สำหรับกราฟโดนัท:
-         * ปกติ Chart.js จะขีดฆ่าข้อความของรายการที่ถูกกดปิดไว้ (built-in behaviour) — อันนี้เปลี่ยนเป็น
-         * ทำให้สีวงกลมกับตัวอักษรของรายการนั้นจางลงแทน โดยผูกกับ container ผ่าน options.plugins.htmlLegend.containerID
-         */
-        const htmlLegendPlugin = {
-            id: 'htmlLegend',
-            afterUpdate(chart, args, options) {
-                const container = document.getElementById(options.containerID);
-                if (!container) return;
-                container.innerHTML = '';
-                const items = chart.options.plugins.legend.labels.generateLabels(chart);
-                items.forEach((item) => {
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'flex items-center gap-1.5 text-xs font-medium transition-opacity';
-                    btn.style.opacity = item.hidden ? '0.3' : '1';
-                    btn.onclick = () => {
-                        chart.toggleDataVisibility(item.index);
-                        chart.update();
-                    };
-                    const swatch = document.createElement('span');
-                    swatch.style.cssText = 'width:10px;height:10px;border-radius:9999px;display:inline-block;flex:none;background-color:' + item.fillStyle;
-                    const label = document.createElement('span');
-                    label.className = 'text-slate-600';
-                    label.textContent = item.text;
-                    btn.appendChild(swatch);
-                    btn.appendChild(label);
-                    container.appendChild(btn);
-                });
-            },
-        };
+<!-- ══════════════════════ HEADER ══════════════════════════ -->
+<header class="app">
+  <div class="brandmark" id="headerBrandmark">
+    <!-- Logo injected by JS -->
+    <span style="font-family:'IBM Plex Mono';font-size:13px;font-weight:700;color:var(--accent-deep)" id="headerLogoFallback">AMR ASIA</span>
+  </div>
+  <div class="brand-text">
+    <h1>Project Equipment Report</h1>
+    <div class="sub">Project Equipment Report</div>
+  </div>
+  <div class="header-stat"><div class="num" id="statCount">0</div><div class="lbl">Recorded</div></div>
+  <div class="user-chip" id="userChip" style="display:none">
+    <div class="av" id="uAvatar">?</div>
+    <div><div class="un" id="uName">—</div><div class="ur" id="uRole">—</div></div>
+    <span class="logout" id="logoutBtn" title="Sign out">Sign Out</span>
+  </div>
+  <button id="darkToggleBtn" class="hdr-ctrl-btn icon-toggle-btn" title="Dark / Light mode"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+</header>
 
-        // TODO: วาง Web App URL ที่ได้จากการ Deploy Google Apps Script ตรงนี้
-        const API_URL = 'https://script.google.com/macros/s/AKfycbxxUCQk03kQGuj24D5dDrvoJjKhCWcwVpFByd73BYYtuIuzjaI668gU7gYTfRSjlTRa/exec';
-        const TOKEN_STORAGE_KEY = 'p25_dashboard_session';
-        const THAI_MONTHS = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-            'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
-        const CURRENT_BUDDHIST_YEAR = new Date().getFullYear() + 543;
+<!-- ══════════════════════ TABS ════════════════════════════ -->
+<nav class="tabs">
+  <button class="tab active" data-tab="dash" id="tabDash">Overview</button>
+  <button class="tab" data-tab="add" id="tabAdd">Add Record</button>
+  <button class="tab" data-tab="saved">Records <span class="pill" id="savedPill">0</span></button>
+  <button class="tab" data-tab="master" id="tabMaster">Master Data <span class="pill" id="masterPill">0</span></button>
+  <button class="tab" data-tab="users" id="tabUsers">Users <span class="pill" id="usersPill">0</span></button>
+</nav>
 
-        createApp({
-            data() {
-                return {
-                    session: null,     // { token, username, role, displayName }
-                    loginForm: { username: '', password: '', loading: false, error: '' },
+<main>
 
-                    currentView: 'dashboard', // 'dashboard' | 'users'
+<!-- ══════ PANEL: DASHBOARD ══════ -->
+<section class="panel active" id="panel-dash">
+  <div class="eyebrow">Overview</div>
+  <div class="panel-title">Project Equipment Overview</div>
+  <div class="panel-desc">Summary of recorded items by project, and daily upload trends</div>
 
-                    apiError: '',
-                    initialLoading: false,
-                    showInitialLoader: false,
-                    searchQuery: '',
-                    cmStatusFilter: '',
-                    cmProvinceFilter: '',
+  <div id="leaderDashSection" style="display:none;margin-bottom:18px">
+    <div class="dash-card">
+      <div class="dc-head"><b>My Projects Overview</b><span id="leaderDonutLegend" style="font-size:12px;color:var(--ink-soft)"></span></div>
+      <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+        <div style="position:relative;flex:none">
+          <svg id="leaderDonutSvg" width="200" height="200" viewBox="0 0 200 200" style="cursor:pointer"></svg>
+          <div id="leaderDonutCenter" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none">
+            <div style="font-size:28px;font-weight:700;font-family:'IBM Plex Mono';color:var(--accent)" id="leaderDonutPct">0%</div>
+            <div style="font-size:11px;color:var(--ink-soft)">Total</div>
+          </div>
+        </div>
+        <div id="leaderDonutList" style="flex:1;min-width:200px;display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+    </div>
+  </div>
 
-                    importHistory: [],
-                    currentImportId: null,
-                    dashboard: { sitesSummary: [], installationSites: [], pmStatus: [], cmTickets: [], equipmentFailureSummary: [], staffSummary: [] },
-                    provinceStats: { byProvince: [], bySite: [] },
-                    provinceFilter: '',
-                    siteFilter: '',
-                    provinceViewMetric: 'cm', // 'cm' | 'pm'
-                    donutFilter: 'all', // 'all' | 'pm' | 'cm'
-                    trend: [],
-                    showTrend: false,
-                    importing: false,
+  <div id="projDetailModal" style="display:none;position:fixed;inset:0;z-index:400;background:rgba(20,26,34,.6);align-items:center;justify-content:center;padding:20px">
+    <div style="background:var(--surface);border-radius:18px;max-width:480px;width:100%;padding:28px;box-shadow:var(--shadow-lift);position:relative">
+      <button onclick="document.getElementById('projDetailModal').style.display='none'" style="position:absolute;top:14px;right:16px;font-size:20px;color:var(--ink-faint);cursor:pointer;background:none;border:none">&times;</button>
+      <div id="projDetailContent"></div>
+    </div>
+  </div>
 
-                    reportFiles: [],
-                    reportYear: CURRENT_BUDDHIST_YEAR,
-                    reportMonth: '', // '' = ทั้งปี, 1-12 = เดือนนั้นๆ
+  <div style="margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <label style="font-size:13px;font-weight:600;color:var(--ink-soft)">Show:</label>
+    <select id="dashMainFilter" class="tin" style="width:auto;min-width:180px;font-size:13px;padding:8px 12px"><option value="__all">All Projects</option></select>
+  </div>
+  <div class="kpi-row" id="kpiRow"></div>
+  <div class="dash-card" style="margin-bottom:14px">
+    <div class="dc-head"><b>Recording Progress</b><span id="progTotalPct" style="font-size:20px;font-weight:700;color:var(--accent)"></span></div>
+    <div id="progSummary"></div>
+    <div id="progChart" style="margin-top:14px"></div>
+  </div>
+  <div class="dash-card" style="margin-bottom:14px">
+    <div class="dc-head"><b>Daily Uploads</b><span id="dayRangeLbl" style="font-size:12px;color:var(--ink-soft)">Last 14 days</span></div>
+    <div id="chartDaily"></div>
+  </div>
+  <div class="dash-card" id="assignDashCard" style="display:none;margin-bottom:14px">
+    <div class="dc-head">
+      <b>Assignment Progress</b>
+      <select id="assignDashFProject" class="tin" style="width:auto;min-width:160px;font-size:12px;padding:6px 10px"><option value="">All Projects</option></select>
+    </div>
+    <div id="assignDashChart" style="margin-top:10px"></div>
+  </div>
+  <div style="text-align:center;margin-top:6px"><button class="btn btn-soft" id="dashRefresh">Refresh Data</button></div>
+</section>
 
-                    users: [],
-                    userRows: [],
-                    newUserForm: { username: '', password: '', displayName: '', role: 'pea', saving: false, error: '' },
-                    // pop-up แก้ไขผู้ใช้งาน (แทนการแก้ inline ในตารางแบบเดิม)
-                    showEditUserModal: false,
-                    editUserForm: { username: '', displayName: '', role: 'pea', password: '', saving: false, error: '' },
-                    showDeleteUserConfirm: false,
-                    deletingUser: false,
-                    deleteUserError: '',
-                    userImport: { dragOver: false, importing: false, error: '', result: null },
+<!-- ══════ PANEL: ADD ══════ -->
+<section class="panel" id="panel-add">
+  <div class="eyebrow" id="addEyebrow">New Record</div>
+  <div class="panel-title" id="addTitle">Add New Record</div>
+  <button class="btn btn-soft qr-only" id="openQrScanBtn" style="width:100%;margin-bottom:16px;justify-content:center">Scan QR/Barcode to Open Form</button>
+  <div class="card">
+    <div class="card-h"><span class="step">1</span><h3>Select Equipment</h3></div>
+    <div class="card-b">
+      <div class="cascade">
+        <div class="field"><label>Project <span class="req">*</span></label><div class="combo" data-level="project"></div></div>
+        <div class="field"><label>System</label><div class="combo disabled" data-level="system"></div></div>
+        <div class="field"><label>Location Type</label><div class="combo disabled" data-level="typeloc"></div></div>
+        <div class="field"><label>Location <span class="req">*</span></label><div class="combo disabled" data-level="loc"></div></div>
+        <div class="field"><label>Sub-location</label><div class="combo disabled" data-level="sub"></div></div>
+        <div class="field"><label>Equipment Type</label><input type="text" id="inpAsset" placeholder="e.g. Firewall, Switch, Transceiver..." autocomplete="off"></div>
+        <div class="field"><label>Equipment <span class="req">*</span></label><div class="combo disabled" data-level="equip"></div></div>
+        <div class="field"><label>Serial Number</label><div class="combo disabled" data-level="serial"></div></div>
+      </div>
+      <div class="bm-row">
+        <div class="bm-box"><div class="k">Brand AUTO</div><div class="v empty" id="bmBrand" data-empty="— Select equipment —"><input id="inpBrand" placeholder="—" style="display:none"></div></div>
+        <div class="bm-box"><div class="k">Model AUTO</div><div class="v empty" id="bmModel" data-empty="— Select equipment —"><input id="inpModel" placeholder="—" style="display:none"></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-h"><span class="step">2</span><h3>Attach Photos</h3></div>
+    <div class="card-b">
+      <div class="imgs">
+        <div class="imgslot"><div class="cap"><span class="tagn">Photo 1</span> Full equipment photo</div>
+          <label class="drop" id="dropMain" for="fileMain"><div class="ph-content"><div class="drop-hint"><b>Choose main photo</b>Full view of the equipment</div></div><div class="replace-badge">Tap to replace</div></label>
+          <input type="file" id="fileMain" accept="image/*" hidden></div>
+        <div class="imgslot"><div class="cap"><span class="tagn">Photo 2</span> Sticker photo</div>
+          <label class="drop" id="dropSticker" for="fileSticker"><div class="ph-content"><div class="drop-hint"><b>Choose sticker photo</b>Equipment label/sticker</div></div><div class="replace-badge">Tap to replace</div></label>
+          <input type="file" id="fileSticker" accept="image/*" hidden></div>
+        <div class="imgslot"><div class="cap"><span class="tagn">Photo 3</span> Additional photo 1</div>
+          <label class="drop" id="dropImg3" for="fileImg3"><div class="ph-content"><div class="drop-hint"><b>Choose additional photo</b></div></div><div class="replace-badge">Tap to replace</div></label>
+          <input type="file" id="fileImg3" accept="image/*" hidden></div>
+        <div class="imgslot"><div class="cap"><span class="tagn">Photo 4</span> Additional photo 2</div>
+          <label class="drop" id="dropImg4" for="fileImg4"><div class="ph-content"><div class="drop-hint"><b>Choose additional photo</b></div></div><div class="replace-badge">Tap to replace</div></label>
+          <input type="file" id="fileImg4" accept="image/*" hidden></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-h"><span class="step">3</span><h3>Inspection Details</h3></div>
+    <div class="card-b">
+      <div class="field"><label>Inspector Name <span class="req">*</span></label><div class="combo" id="inspCombo"></div></div>
+      <div class="field" style="margin-top:14px"><label>Note</label><textarea class="tin" id="inpNote" placeholder="Additional details"></textarea></div>
+    </div>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-soft" id="resetBtn">Clear Form</button>
+    <button class="btn btn-primary" id="saveBtn">Save Record</button>
+  </div>
+</section>
 
-                    charts: { overall: null, site: null, trend: null },
-                    chartsError: '', // ข้อความ error ที่จับได้จากการวาดกราฟ (โชว์ในหน้าเว็บ แทนที่จะเงียบแล้วปล่อยกราฟว่าง)
+<!-- ══════ PANEL: SAVED ══════ -->
+<section class="panel" id="panel-saved">
+  <div class="eyebrow">Records</div>
+  <div class="panel-title">Records</div>
+  <div class="ro-banner">Your account (observer) is view-only</div>
+  <div id="savedProgress" class="dash-card" style="margin-bottom:14px;display:none">
+    <div class="dc-head"><b>Recording Progress</b><select id="savedProgFilter" class="tin" style="width:auto;min-width:160px;font-size:12.5px;padding:6px 10px;display:none"></select></div>
+    <div id="savedProgBody"></div>
+  </div>
+  <div id="myAssignmentsSection" style="display:none;margin-bottom:18px">
+    <div class="dash-card">
+      <div class="dc-head">
+        <b>Assigned Work <span class="pill" id="assignPill">0</span></b>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-soft" id="exportAssignBtn" style="font-size:12px;padding:6px 12px">Export Excel</button>
+          <button class="btn btn-soft" id="setProjectTargetBtn" style="font-size:12px;padding:6px 12px;display:none">Target</button>
+          <button class="btn btn-primary" id="assignWorkBtn" style="font-size:12px;padding:6px 14px;display:none">Assign Work</button>
+          <button id="assignSectionToggle" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--ink-soft)" title="Show/hide">▾</button>
+        </div>
+      </div>
+      <div id="assignStatsPanel" style="margin-top:12px"></div>
+      <div id="myAssignmentsList" style="display:flex;flex-direction:column;gap:10px;margin-top:8px"></div>
+    </div>
+  </div>
+  <div class="saved-tools flt-toolbar" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+    <input type="text" id="savedSearch" placeholder="Search records…" style="flex:1;min-width:180px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:9px 12px;outline:none">
+    <details class="flt-drawer">
+      <summary class="flt-drawer-toggle">Filters</summary>
+      <div class="flt-drawer-body">
+        <select id="savedFProject" class="tin" style="width:auto;min-width:130px"><option value="">All Projects</option></select>
+        <select id="savedFSystem" class="tin" style="width:auto;min-width:110px"><option value="">All Systems</option></select>
+        <select id="savedFLoc" class="tin" style="width:auto;min-width:130px"><option value="">All Locations</option></select>
+        <select id="savedFSub" class="tin" style="width:auto;min-width:130px"><option value="">All Sub-locations</option></select>
+        <select id="savedFEquip" class="tin" style="width:auto;min-width:150px"><option value="">All Equipment</option></select>
+        <select id="savedSort" class="tin" style="width:auto;min-width:160px">
+          <option value="newest">Newest→Oldest</option><option value="oldest">Oldest→Newest</option>
+          <option value="az">Equipment A→Z</option><option value="za">Equipment Z→A</option>
+          <option value="proj_th_az">Project ก→ฮ</option><option value="proj_th_za">Project ฮ→ก</option>
+          <option value="proj_en_az">Project A→Z</option><option value="proj_en_za">Project Z→A</option>
+        </select>
+      </div>
+    </details>
+    <button class="ghost-btn" id="exportXlsx">Export Excel</button>
+    <button class="ghost-btn word-report-only" id="openWordReportBtn" disabled>Report</button>
+  </div>
+  <div class="rlist" id="savedGrid"></div>
+</section>
 
-                    ticketDetail: null,
-                    ticketDetailLoading: false,
-                    showTicketModal: false,
+<!-- ══════ MODAL: IMPORT EXCEL (opened from the Master Data page) ══════ -->
+<div id="importExcelModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(20,26,34,.5);align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--surface);border-radius:18px;max-width:520px;width:100%;padding:28px;box-shadow:0 8px 40px rgba(0,0,0,.2);position:relative;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <div style="font-size:17px;font-weight:700;color:var(--ink)">Import Equipment Data (Excel)</div>
+      <button id="importExcelModalClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink-faint)">&times;</button>
+    </div>
+    <label class="import-drop" for="fileXlsx">
+      <div class="id-ic">📁</div>
+      <b>Choose or drag an Excel file</b>
+      <span>Supports .xlsx · .xls · .csv</span>
+      <span class="id-btn">Choose File</span>
+    </label>
+    <input type="file" id="fileXlsx" accept=".xlsx,.xls,.csv" hidden>
+    <div class="import-cols" style="margin-top:14px">
+      <div style="font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:6px">Supported columns</div>
+      <div class="ic-grid"><span>Order</span><span>Project</span><span>System</span><span>Location Type</span><span>Location</span><span>Sub-location</span><span>Equipment Type</span><span>Equipment</span><span>Brand</span><span>Model</span><span>Serial Number</span></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+      <button class="ghost-btn" onclick="downloadMasterTemplate()" style="flex:1;min-width:140px">Download Blank Form</button>
+      <button class="ghost-btn" onclick="downloadMasterData()" style="flex:1;min-width:140px">Download Current Data</button>
+    </div>
+    <div id="importPreview" style="margin-top:12px"></div>
+  </div>
+</div>
 
-                    showAddCmModal: false,
-                    addCmForm: { ticketId: '', site: '', province: '', system: '', reportedAt: '', status: 'รอดำเนินการ', saving: false, error: '', siteSuggestOpen: false, provinceSuggestOpen: false },
+<!-- ══════ WARP ANIMATION OVERLAY (shown while generating the Word report) ══════ -->
+<div id="warpOverlay" style="display:none;position:fixed;inset:0;z-index:99999;background:#03040c;overflow:hidden">
+  <canvas id="warpCanvas" style="position:absolute;inset:0;width:100%;height:100%;display:block"></canvas>
+  <div id="warpDone" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;flex-direction:column">
+    <canvas id="warpPlanet" width="240" height="240"></canvas>
+    <div id="warpDoneText">Report generated ✨</div>
+  </div>
+  <div id="warpStatus"></div>
+</div>
 
-                    showEditSiteModal: false,
-                    editSiteForm: { no: null, location: '', province: '', saving: false, error: '', locationSuggestOpen: false, provinceSuggestOpen: false },
 
-                    showEditCmModal: false,
-                    editCmForm: { ticketId: '', site: '', province: '', system: '', reportedAt: '', status: 'รอดำเนินการ', saving: false, error: '', siteSuggestOpen: false, provinceSuggestOpen: false },
-                    // ลิงก์เปิด Google Sheet ตรง (เฉพาะ admin) — มาจาก bootstrap()/getSheetLinks()
-                    sheetLinks: null,
-                };
-            },
-            computed: {
-                // ตัวเลือกปีของกล่อง "รายงานการซ่อมบำรุง" — ย้อนหลัง 5 ปีถึงปีถัดไป (เผื่อโฟลเดอร์เตรียมไว้ล่วงหน้า) เรียงใหม่สุดก่อน
-                reportYearOptions() {
-                    const years = [];
-                    for (let y = CURRENT_BUDDHIST_YEAR + 1; y >= CURRENT_BUDDHIST_YEAR - 5; y--) years.push(y);
-                    return years;
-                },
-                thaiMonths() {
-                    return THAI_MONTHS;
-                },
-                filteredInstallationSites() {
-                    const list = this.dashboard.installationSites;
-                    if (!this.searchQuery) return list;
-                    const q = this.searchQuery.toLowerCase();
-                    return list.filter(item =>
-                        (item.location || '').toLowerCase().includes(q) ||
-                        (item.equipment || '').toLowerCase().includes(q)
-                    );
-                },
-                selectedImportExcelUrl() {
-                    const found = this.importHistory.find(h => h.importId === this.currentImportId);
-                    return found ? found.excelFileUrl : '';
-                },
-                cmProvinceOptions() {
-                    const set = new Set(this.dashboard.cmTickets.map(t => t.province).filter(Boolean));
-                    return Array.from(set).sort();
-                },
-                provinceOptions() {
-                    return this.provinceStats.byProvince.map(p => p.province).sort();
-                },
-                donutHasData() {
-                    const cmCount = (this.dashboard.cmTickets || []).length;
-                    const pmTotal = (this.dashboard.pmStatus || []).reduce((sum, p) => sum + (Number(p.total) || 0), 0);
-                    return cmCount > 0 || pmTotal > 0;
-                },
-                siteNameOptions() {
-                    // Known site names for this round, used as autocomplete suggestions
-                    // on the "สถานที่ติดตั้งอุปกรณ์" fields.
-                    const set = new Set(this.dashboard.installationSites.map(s => s.location).filter(Boolean));
-                    return Array.from(set).sort();
-                },
-                siteOptionsForProvince() {
-                    if (!this.provinceFilter) return [];
-                    return this.provinceStats.bySite
-                        .filter(s => s.province === this.provinceFilter)
-                        .map(s => s.site)
-                        .sort();
-                },
-                sortedCmTickets() {
-                    // Overdue first (most overdue first), then open tickets soonest-due first, finished last
-                    const list = this.dashboard.cmTickets.filter(t => {
-                        if (this.cmStatusFilter && this.displayStatus(t) !== this.cmStatusFilter) return false;
-                        if (this.cmProvinceFilter && t.province !== this.cmProvinceFilter) return false;
-                        return true;
-                    });
-                    return list.slice().sort((a, b) => {
-                        const rank = t => t.status === 'เสร็จสิ้น' ? 2 : (t.slaHoursLeft < 0 ? 0 : 1);
-                        const ra = rank(a), rb = rank(b);
-                        if (ra !== rb) return ra - rb;
-                        return a.slaHoursLeft - b.slaHoursLeft;
-                    });
-                },
-                overdueCmCount() {
-                    return this.dashboard.cmTickets.filter(t => this.displayStatus(t) === 'เกิน SLA').length;
-                },
-            },
-            async mounted() {
-                const saved = localStorage.getItem(TOKEN_STORAGE_KEY);
-                if (saved) {
-                    try {
-                        this.session = JSON.parse(saved);
-                        await this.bootstrapLoad();
-                    } catch (err) {
-                        this.session = null;
-                        localStorage.removeItem(TOKEN_STORAGE_KEY);
-                    }
-                }
-            },
-            methods: {
-                roleLabel(role) {
-                    return { admin: 'ผู้ดูแลระบบ', pea: 'เจ้าหน้าที่ PEA' }[role] || role;
-                },
+<!-- ══════ PANEL: MASTER ══════ -->
+<section class="panel" id="panel-master">
+  <div class="eyebrow">Master Data</div>
+  <div class="panel-title">Master Data</div>
+  <div class="flt-toolbar" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+    <input type="text" id="masterSearch" placeholder="Search master data…" style="flex:1;min-width:180px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:9px 12px;outline:none">
+    <details class="flt-drawer">
+      <summary class="flt-drawer-toggle">Filters</summary>
+      <div class="flt-drawer-body">
+        <select id="masterFProject" class="tin" style="width:auto;min-width:130px"><option value="">All Projects</option></select>
+        <select id="masterFSystem" class="tin" style="width:auto;min-width:110px"><option value="">All Systems</option></select>
+        <select id="masterFLoc" class="tin" style="width:auto;min-width:130px"><option value="">All Locations</option></select>
+        <select id="masterFSub" class="tin" style="width:auto;min-width:130px"><option value="">All Sub-locations</option></select>
+        <select id="masterFEquip" class="tin" style="width:auto;min-width:150px"><option value="">All Equipment</option></select>
+        <select id="masterFMissing" class="tin" style="width:auto;min-width:160px">
+          <option value="">Show All</option>
+          <option value="brand">Missing Brand</option>
+          <option value="model">Missing Model</option>
+          <option value="serial">Missing Serial</option>
+          <option value="any">Missing Any Field</option>
+        </select>
+        <select id="masterFSort" class="tin" style="width:auto;min-width:160px">
+          <option value="order_asc">Order Low→High</option>
+          <option value="order_desc">Order High→Low</option>
+        </select>
+      </div>
+    </details>
+    <button class="btn btn-primary edit-only" id="addMasterBtn">Add Equipment</button>
+    <button class="btn btn-danger edit-only" id="bulkDelMasterBtn" style="background:#EF4444;color:#fff;border:none">Delete by Filter</button>
+    <button class="ghost-btn edit-only" id="openImportExcelBtn">Import Equipment Data (Excel)</button>
+    <button class="ghost-btn admin-only" id="openQrMasterBtn">QR Code</button>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th title="Order used for generating Word/PDF">Order</th><th>Project</th><th>System</th><th>Location Type</th><th>Location</th><th>Sub-location</th><th>Equipment Type</th><th>Equipment</th><th>Brand</th><th>Model</th><th>Serial</th><th></th></tr></thead>
+      <tbody id="masterBody"></tbody>
+    </table>
+  </div>
+  <div id="masterLoadMoreWrap" style="text-align:center;margin-top:14px"></div>
+</section>
 
-                async submitLogin() {
-                    if (!this.loginForm.username || !this.loginForm.password) {
-                        this.loginForm.error = 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน';
-                        return;
-                    }
-                    this.loginForm.loading = true;
-                    this.loginForm.error = '';
-                    try {
-                        const res = await fetch(API_URL, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                            body: JSON.stringify({
-                                action: 'login',
-                                params: { username: this.loginForm.username, password: this.loginForm.password },
-                            }),
-                        });
-                        const json = await this.parseJsonResponse(res);
-                        if (!json.ok) throw new Error(json.error || 'เข้าสู่ระบบไม่สำเร็จ');
+<!-- ══════ PANEL: USERS ══════ -->
+<section class="panel" id="panel-users">
+  <div class="admin-only" style="margin-bottom:22px">
+    <div class="eyebrow">Page Permissions</div>
+    <div class="panel-title" style="font-size:16px">Set Access Permissions per Role</div>
+    <div class="panel-desc">Choose which pages each role can see, or whether they can use the "Generate PDF Report"/"Delete" buttons</div>
+    <div id="pagePermContainer" style="background:var(--surface);border:1px solid var(--line-soft);border-radius:14px;padding:16px;box-shadow:var(--shadow)"></div>
+  </div>
+  <div class="eyebrow">User Management</div>
+  <div class="panel-title">Manage Users</div>
+  <div class="user-cols">
+    <div class="card"><div class="card-b">
+      <div class="card-h"><span class="step">+</span><h3>Add User</h3></div>
+      <div class="field"><label>Username <span class="req">*</span></label><input type="text" class="tin" id="nuUser" placeholder="e.g. somchai.j" autocomplete="off"></div>
+      <div class="field" style="margin-top:12px"><label>Password <span class="req">*</span></label><input type="text" class="tin" id="nuPass" placeholder="Set an initial password" autocomplete="off"></div>
+      <div class="field" style="margin-top:12px"><label>Full Name</label><input type="text" class="tin" id="nuName" placeholder="Display name"></div>
+      <div class="field" style="margin-top:12px"><label>Email</label><input type="email" class="tin" id="nuEmail" placeholder="For notifications (optional)" autocomplete="off"></div>
+      <div class="field" style="margin-top:12px"><label>Role <span class="req">*</span></label>
+        <select class="tin" id="nuRole">
+          <option value="inspector">inspector — Inspector</option>
+          <option value="observer">observer — Observer</option>
+          <option value="leader">leader — Team Lead</option>
+          <option value="manager">manager — Manager</option>
+          <option value="admin">admin — Administrator</option>
+        </select>
+      </div>
+      <div id="nuProjectChips" class="chips-box" style="margin-top:12px"></div>
+      <div class="field" style="margin-top:12px"><label>Project</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="text" class="tin" id="nuProject" list="nuProjectList" placeholder="Select a project then press +" style="flex:1">
+          <button type="button" class="round-add-btn" id="nuProjectAdd" title="Add this project">+</button>
+        </div>
+        <datalist id="nuProjectList"></datalist>
+      </div>
+      <button class="btn btn-primary" id="nuAdd" style="margin-top:16px;width:100%">Add User</button>
+    </div></div>
+    <div class="card"><div class="card-b">
+      <div class="card-h"><span class="step">⬆</span><h3>Import from Excel</h3></div>
+      <label class="import-drop" for="fileUsers" style="padding:26px 18px">
+        <div class="id-ic" style="width:52px;height:52px;font-size:22px">📁</div>
+        <b>Choose or drag an Excel file</b><span>.xlsx · .xls · .csv</span>
+        <span class="id-btn">Choose File</span>
+      </label>
+      <input type="file" id="fileUsers" accept=".xlsx,.xls,.csv" hidden>
+      <div class="import-cols" style="margin-top:14px">
+        <div style="font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:6px">Supported columns</div>
+        <div class="ic-grid"><span>username</span><span>password</span><span>name</span><span>role</span><span>project</span><span>email</span></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+        <button class="ghost-btn" onclick="downloadUsersTemplate()" style="flex:1;min-width:140px">Download Blank Form</button>
+        <button class="ghost-btn" onclick="downloadUsersData()" style="flex:1;min-width:140px">Download User Data</button>
+      </div>
+      <div id="usersImportMsg" style="margin-top:12px"></div>
+    </div></div>
+  </div>
+  <div style="margin-top:20px;display:flex;gap:10px">
+    <input type="text" id="usersSearch" placeholder="Search users…" style="flex:1;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:9px 12px;outline:none">
+    <button class="btn btn-soft" id="usersRefresh">Refresh</button>
+  </div>
+  <div class="table-wrap" style="margin-top:14px">
+    <table>
+      <thead><tr><th>Username</th><th>Password</th><th>Full Name</th><th>Role</th><th>Project</th><th>Email</th><th>Status</th><th></th></tr></thead>
+      <tbody id="usersBody"></tbody>
+    </table>
+  </div>
+</section>
 
-                        this.session = json.data;
-                        localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(this.session));
-                        this.loginForm = { username: '', password: '', loading: false, error: '' };
-                        await this.bootstrapLoad();
-                    } catch (err) {
-                        this.loginForm.error = err.message;
-                        this.loginForm.loading = false;
-                    }
-                },
+<!-- ══════ ASSIGN MODAL ══════ -->
+<div id="assignModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(20,26,34,.5);align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--surface);border-radius:18px;max-width:520px;width:100%;padding:28px;box-shadow:0 8px 40px rgba(0,0,0,.2);position:relative;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <div style="font-size:17px;font-weight:700;color:var(--ink)">Assign Work</div>
+      <button id="assignModalClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink-faint)">&times;</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:5px">Project *</label>
+        <div id="awProjectChips" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px"></div>
+        <input type="text" class="tin" id="awProject" placeholder="Add project…" autocomplete="off" style="width:100%">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:5px">Assignee *</label>
+        <input type="text" class="tin" id="awAssignee" placeholder="Type or select assignee…" autocomplete="off" style="width:100%">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:8px">Work Scope</label>
+        <div style="display:flex;flex-wrap:wrap;gap:10px">
+          <label style="display:flex;align-items:center;gap:5px;font-size:13px"><input type="radio" name="awScope" value="project" checked> Whole Project</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:13px"><input type="radio" name="awScope" value="loc"> Location</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:13px"><input type="radio" name="awScope" value="sub"> Sub-location</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:13px"><input type="radio" name="awScope" value="equip"> Equipment</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:13px"><input type="radio" name="awScope" value="missing"> Missing Data</label>
+        </div>
+      </div>
+      <div id="awLocRow" style="display:none">
+        <label style="font-size:12px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:5px">Location</label>
+        <div id="awLocChips" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px"></div>
+        <input type="text" class="tin" id="awLoc" placeholder="Add location…" autocomplete="off" style="width:100%">
+      </div>
+      <div id="awSubRow" style="display:none">
+        <label style="font-size:12px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:5px">Sub-location</label>
+        <div id="awSubChips" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px"></div>
+        <input type="text" class="tin" id="awSub" placeholder="Add sub-location…" autocomplete="off" style="width:100%">
+      </div>
+      <div id="awEquipRow" style="display:none">
+        <label style="font-size:12px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:5px">Equipment</label>
+        <div id="awEquipChips" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px"></div>
+        <input type="text" class="tin" id="awEquip" placeholder="Add equipment…" autocomplete="off" style="width:100%">
+      </div>
+      <div id="awMissingRow" style="display:none">
+        <label style="font-size:12px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:8px">Records Missing Data <span id="awMissingCount"></span></label>
+        <div class="table-wrap" style="max-height:200px;overflow-y:auto">
+          <table style="width:100%">
+            <thead><tr><th style="padding:6px 10px"><input type="checkbox" id="awMissingSelectAll"></th><th style="padding:6px 8px">Sub-location</th><th style="padding:6px 8px">Equipment</th><th style="padding:6px 8px">Missing Fields</th></tr></thead>
+            <tbody id="awMissingBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div><label style="font-size:12px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:5px">Note</label><input type="text" class="tin" id="awNote" placeholder="Note (optional)" style="width:100%"></div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:5px">Due Date <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label>
+        <input type="date" class="tin" id="awTargetDate" style="width:100%">
+        <div style="font-size:11px;color:var(--ink-faint);margin-top:3px" id="awTargetHint"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn btn-soft" id="awCancelBtn">Cancel</button>
+      <button class="btn btn-primary" id="awSaveBtn">Assign Work</button>
+    </div>
+  </div>
+</div>
 
-                async doLogout() {
-                    try { await this.api('logout'); } catch (err) { /* ignore */ }
-                    this.session = null;
-                    this.currentView = 'dashboard';
-                    localStorage.removeItem(TOKEN_STORAGE_KEY);
-                },
+<!-- ══════ PROJECT TARGET MODAL ══════ -->
+<div id="projectTargetModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(20,26,34,.5);align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--surface);border-radius:18px;max-width:420px;width:100%;padding:28px;box-shadow:0 8px 40px rgba(0,0,0,.2);position:relative">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <div style="font-size:17px;font-weight:700;color:var(--ink)">Set Project Target</div>
+      <button id="ptModalClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink-faint)">&times;</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:5px">Project *</label>
+        <input type="text" class="tin" id="ptProject" placeholder="Type or select a project…" autocomplete="off" style="width:100%">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:5px">Due Date *</label>
+        <input type="date" class="tin" id="ptDeadline" style="width:100%">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:5px">Note</label>
+        <input type="text" class="tin" id="ptNote" placeholder="Note (optional)" style="width:100%">
+      </div>
+      <div id="ptCurrentInfo" style="font-size:12px;color:var(--ink-soft);background:var(--bg);border-radius:8px;padding:8px 12px;display:none"></div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn btn-soft" id="ptCancelBtn">Cancel</button>
+      <button class="btn btn-primary" id="ptSaveBtn">Save Target</button>
+    </div>
+  </div>
+</div>
 
-                /**
-                 * Parses a fetch Response as JSON. When the server didn't return valid JSON,
-                 * inspects the raw text to figure out *why* instead of always blaming the
-                 * deploy permission — that used to be the only message shown here, which was
-                 * misleading whenever the real cause was something else (e.g. Apps Script kept
-                 * running and actually saved the change, but the HTTP response itself timed out
-                 * on the way back — refreshing then shows the change went through after all).
-                 */
-                async parseJsonResponse(res) {
-                    const text = await res.text();
-                    try {
-                        return JSON.parse(text);
-                    } catch (err) {
-                        if (API_URL.includes('XXXXXXXX')) {
-                            throw new Error('ยังไม่ได้ตั้งค่า API_URL — กรุณานำ Web App URL ของ Google Apps Script มาใส่ในโค้ด (ตัวแปร API_URL)');
-                        }
-                        // Google ส่งหน้า HTML "ขอ sign in" กลับมาแทน JSON จริงๆ เฉพาะกรณีสิทธิ์ deploy ผิด
-                        if (/accounts\.google\.com|ServiceLogin|isn't verified|ไม่ได้รับอนุญาต/i.test(text)) {
-                            throw new Error('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ — ดูเหมือน Deploy Google Apps Script ยังตั้งสิทธิ์การเข้าถึงไม่ใช่ "Anyone" (Google ส่งหน้าล็อกอินกลับมาแทนข้อมูล) กรุณาตรวจสอบใน Deploy > Manage deployments อีกครั้ง');
-                        }
-                        // Response ว่างเปล่า/ขาดกลางทาง — มักเกิดจาก Apps Script รันช้ากว่าที่ browser รอไหว
-                        // (เช่น ชีทมีแถวเยอะ) ตัวฟังก์ชันบน server ส่วนใหญ่จะรันจนจบอยู่ดีและบันทึกสำเร็จ
-                        // แม้ response จะมาไม่ทัน — ไม่ใช่ปัญหาสิทธิ์ deploy เลย
-                        if (!text || text.trim().length === 0) {
-                            throw new Error('เซิร์ฟเวอร์ตอบกลับไม่ทัน (การเชื่อมต่อหลุดระหว่างรอผล) — ปกติแล้ว Apps Script จะรันจนจบและบันทึกข้อมูลสำเร็จอยู่ดี กรุณา "รีเฟรชหน้าเว็บ" เพื่อตรวจสอบก่อนว่าข้อมูลบันทึกไปแล้วหรือยัง แล้วค่อยลองทำซ้ำถ้ายังไม่ขึ้น (เพื่อไม่ให้บันทึกซ้ำซ้อน)');
-                        }
-                        // เหลือกรณีอื่นที่ไม่รู้จักแน่ชัด — ไม่ฟันธงว่าเป็นเรื่องสิทธิ์ deploy อีกต่อไป
-                        throw new Error('เซิร์ฟเวอร์ตอบกลับมาในรูปแบบที่ไม่คาดคิด (ไม่ใช่ JSON) กรุณารีเฟรชหน้าเว็บเพื่อตรวจสอบว่าข้อมูลบันทึกไปแล้วหรือไม่ ก่อนลองใหม่ ถ้ายังเจอซ้ำๆ ให้ตรวจ Deploy > Manage deployments ว่าเวอร์ชันที่ deploy อยู่เป็นเวอร์ชันล่าสุดของโค้ดหรือยัง (แก้โค้ดแล้วต้องกด "New version" ทุกครั้ง ไม่ใช่แค่ Save)');
-                    }
-                },
+<!-- ══════ FILL DATA MODAL ══════ -->
+<div id="fillDataModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(20,26,34,.5);align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--surface);border-radius:18px;max-width:400px;width:100%;padding:28px;box-shadow:0 8px 40px rgba(0,0,0,.2);position:relative">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:16px;font-weight:700;color:var(--ink)">Fill Missing Data</div>
+      <button id="fillDataClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink-faint)">&times;</button>
+    </div>
+    <div id="fillDataInfo" style="margin-bottom:14px;font-size:13px;color:var(--ink-soft)"></div>
+    <div id="fillDataFields" style="display:flex;flex-direction:column;gap:12px"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn btn-soft" id="fillDataCancel">Cancel</button>
+      <button class="btn btn-primary" id="fillDataSave">Save</button>
+    </div>
+  </div>
+</div>
 
-                /** Single bridge to the GAS Web App — mirrors the dispatch(action, params) convention */
-                async api(action, params) {
-                    let res;
-                    try {
-                        res = await fetch(API_URL, {
-                            method: 'POST',
-                            // text/plain avoids a CORS preflight against the Apps Script endpoint
-                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                            body: JSON.stringify({ action, params: Object.assign({}, params, { token: this.session ? this.session.token : null }) }),
-                        });
-                    } catch (networkErr) {
-                        // fetch() เองล้มเหลว (เน็ตหลุด/CORS/DNS) — คนละกรณีกับสิทธิ์ deploy ผิด
-                        throw new Error('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ (เครือข่ายขัดข้องหรือเรียก API ไม่ถึง): ' + networkErr.message);
-                    }
-                    const json = await this.parseJsonResponse(res);
-                    if (!json.ok) {
-                        if (/เข้าสู่ระบบ|เซสชันหมดอายุ/.test(json.error || '')) {
-                            this.session = null;
-                            localStorage.removeItem(TOKEN_STORAGE_KEY);
-                        }
-                        throw new Error(json.error || 'ไม่ทราบสาเหตุ');
-                    }
-                    return json.data;
-                },
+</main>
 
-                /**
-                 * Single combined call replacing the old sequence of
-                 * getImportHistory -> getDashboardData+getProvinceStats -> getReportFiles
-                 * (-> getUsers for admin) — 4-5 separate round trips to the Web App down to
-                 * 1, so first paint after login/reload only waits on one request. Shows
-                 * nothing for the first second (a fast load shouldn't flash a spinner), then
-                 * a spinner if the request is genuinely slow.
-                 */
-                async bootstrapLoad() {
-                    this.initialLoading = true;
-                    this.showInitialLoader = false;
-                    const timer = setTimeout(() => { if (this.initialLoading) this.showInitialLoader = true; }, 1000);
-                    try {
-                        this.apiError = '';
-                        const data = await this.api('bootstrap', { reportYear: this.reportYear, reportMonth: this.reportMonth || undefined });
-                        if (!data) throw new Error('BOOTSTRAP_EMPTY_RESPONSE');
-                        this.importHistory = data.importHistory || [];
-                        if (this.importHistory.length > 0) this.currentImportId = this.importHistory[0].importId;
-                        this.dashboard = Object.assign({ equipmentFailureSummary: [], staffSummary: [] }, data.dashboard);
-                        this.provinceStats = Object.assign({ byProvince: [], bySite: [] }, data.provinceStats);
-                        this.reportFiles = data.reportFiles || [];
-                        if (this.session.role === 'admin') {
-                            this.users = data.users || [];
-                            this.userRows = this.users.map(u => ({
-                                username: u.username, displayName: u.displayName, role: u.role,
-                                password: '', saving: false, error: '',
-                            }));
-                            this.sheetLinks = data.sheetLinks || null;
-                        }
-                    } catch (err) {
-                        // Most likely cause: the frontend was updated but the Apps Script
-                        // backend hasn't been re-deployed with the 'bootstrap' action yet
-                        // (dispatch() there still throws "ไม่รู้จัก action" for it, or an
-                        // even older deployment returns something unexpected). Rather than
-                        // show an error, fall back to the old sequence of separate calls so
-                        // the dashboard still works — once the backend IS redeployed, the
-                        // fast path above just starts succeeding on its own, no other change needed.
-                        try {
-                            await this.loadImportHistory();
-                            await this.loadReportFiles();
-                            if (this.session.role === 'admin') {
-                                await this.loadUsers();
-                                try { this.sheetLinks = await this.api('getSheetLinks'); } catch (e2) { /* non-critical */ }
-                            }
-                        } catch (fallbackErr) {
-                            this.apiError = fallbackErr.message;
-                        }
-                    } finally {
-                        clearTimeout(timer);
-                        this.initialLoading = false;
-                        this.showInitialLoader = false;
-                        this.$nextTick(() => this.renderMainCharts());
-                    }
-                },
+<div id="reportArea"></div>
+<div class="toast" id="toast"><span class="tdot"></span><span id="toastMsg"></span></div>
 
-                async loadImportHistory() {
-                    try {
-                        this.apiError = '';
-                        this.importHistory = await this.api('getImportHistory');
-                        if (this.importHistory.length > 0) {
-                            this.currentImportId = this.importHistory[0].importId; // newest
-                            await this.loadDashboard(this.currentImportId);
-                        }
-                    } catch (err) {
-                        this.apiError = err.message;
-                    }
-                },
+<!-- ══════ MODAL: QR/BARCODE SCAN ══════ -->
+<div id="qrScanModal" style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(10,14,20,.85);align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--surface);border-radius:18px;max-width:420px;width:100%;padding:20px;box-shadow:0 8px 40px rgba(0,0,0,.3)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:16px;font-weight:700;color:var(--ink)">Scan QR / Barcode</div>
+      <button id="qrScanClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink-faint)">&times;</button>
+    </div>
+    <div id="qrReaderBox" style="width:100%;border-radius:12px;overflow:hidden;background:#000;min-height:240px"></div>
+    <div id="qrScanMsg" style="margin-top:12px;font-size:13px;color:var(--ink-soft);text-align:center">Opening camera…</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
+      <div style="flex:1;height:1px;background:var(--line)"></div>
+      <span style="font-size:12px;color:var(--ink-faint)">or</span>
+      <div style="flex:1;height:1px;background:var(--line)"></div>
+    </div>
+    <label class="ghost-btn" for="qrScanFile" style="width:100%;justify-content:center;margin-top:14px;cursor:pointer">Attach a photo to scan</label>
+    <input type="file" id="qrScanFile" accept="image/*" style="display:none">
+  </div>
+</div>
 
-                async loadDashboard(importId) {
-                    try {
-                        this.apiError = '';
-                        const [data, provinceStats] = await Promise.all([
-                            this.api('getDashboardData', { importId }),
-                            this.api('getProvinceStats', { importId }),
-                        ]);
-                        this.dashboard = Object.assign({ equipmentFailureSummary: [], staffSummary: [] }, data);
-                        this.provinceStats = Object.assign({ byProvince: [], bySite: [] }, provinceStats);
-                        this.provinceFilter = '';
-                        this.siteFilter = '';
-                        this.donutFilter = 'all';
-                        this.provinceViewMetric = 'cm';
-                        this.$nextTick(() => this.renderMainCharts());
-                    } catch (err) {
-                        this.apiError = err.message;
-                    }
-                },
+<!-- ══════ MODAL: QR CODE GENERATOR (Master Data, admin only) ══════ -->
+<div id="qrMasterModal" style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(10,14,20,.85);align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:18px;max-width:420px;width:100%;padding:26px;box-shadow:0 8px 40px rgba(0,0,0,.3);position:relative">
+    <button id="qrMasterClose" style="position:absolute;top:14px;right:14px;background:none;border:none;font-size:22px;cursor:pointer;color:#888">&times;</button>
+    <div style="font-size:17px;font-weight:700;color:#111;margin-bottom:4px">Generate QR Codes</div>
+    <div style="font-size:13px;color:#666;margin-bottom:16px">Narrow down with filters, or leave as "All" to include everything</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <select id="qrfProject" class="tin" style="width:100%"><option value="">All Projects</option></select>
+      <select id="qrfTypeLoc" class="tin" style="width:100%"><option value="">All Location Types</option></select>
+      <select id="qrfLoc" class="tin" style="width:100%"><option value="">All Locations</option></select>
+      <select id="qrfSub" class="tin" style="width:100%"><option value="">All Sub-locations</option></select>
+      <select id="qrfEquip" class="tin" style="width:100%"><option value="">All Equipment</option></select>
+    </div>
+    <div id="qrMasterCount" style="margin-top:14px;font-size:13px;color:#444"></div>
+    <button class="btn btn-primary" id="qrMasterGenBtn" style="width:100%;margin-top:16px">Generate QR Codes</button>
+  </div>
+</div>
 
-                onSelectImportRound() {
-                    this.loadDashboard(this.currentImportId);
-                },
-
-                async loadTrend() {
-                    try {
-                        this.trend = await this.api('getTrend');
-                        this.$nextTick(() => this.renderTrendChart());
-                    } catch (err) {
-                        this.apiError = err.message;
-                    }
-                },
-
-                async loadReportFiles() {
-                    try {
-                        this.reportFiles = await this.api('getReportFiles', { year: this.reportYear, month: this.reportMonth || undefined });
-                    } catch (err) {
-                        this.apiError = err.message;
-                    }
-                },
-
-                handleFileChange(e) {
-                    const file = e.target.files[0];
-                    if (!file) return;
-                    this.importing = true;
-                    const reader = new FileReader();
-                    reader.onload = async () => {
-                        try {
-                            const base64 = reader.result.split(',')[1];
-                            const { importId } = await this.api('importExcel', {
-                                fileName: file.name,
-                                mimeType: file.type,
-                                base64: base64,
-                            });
-                            await this.loadImportHistory();
-                            this.currentImportId = importId;
-                            await this.loadDashboard(importId);
-                        } catch (err) {
-                            this.apiError = err.message;
-                            alert('นำเข้าข้อมูลไม่สำเร็จ: ' + err.message);
-                        } finally {
-                            this.importing = false;
-                            e.target.value = '';
-                        }
-                    };
-                    reader.readAsDataURL(file);
-                },
-
-                async loadUsers() {
-                    try {
-                        this.users = await this.api('getUsers');
-                        this.userRows = this.users.map(u => ({
-                            username: u.username, displayName: u.displayName, role: u.role,
-                        }));
-                    } catch (err) {
-                        this.apiError = err.message;
-                    }
-                },
-
-                handleUserImportChange(e) {
-                    const file = e.target.files[0];
-                    e.target.value = '';
-                    if (file) this.importUserFile(file);
-                },
-
-                handleUserImportDrop(e) {
-                    this.userImport.dragOver = false;
-                    const file = e.dataTransfer.files[0];
-                    if (file) this.importUserFile(file);
-                },
-
-                importUserFile(file) {
-                    this.userImport.importing = true;
-                    this.userImport.error = '';
-                    this.userImport.result = null;
-                    const reader = new FileReader();
-                    reader.onload = async () => {
-                        try {
-                            const base64 = reader.result.split(',')[1];
-                            const result = await this.api('importUsers', {
-                                fileName: file.name, mimeType: file.type, base64: base64,
-                            });
-                            this.userImport.result = result;
-                            await this.loadUsers();
-                        } catch (err) {
-                            this.userImport.error = err.message;
-                        } finally {
-                            this.userImport.importing = false;
-                        }
-                    };
-                    reader.readAsDataURL(file);
-                },
-
-                downloadUserTemplate() {
-                    const ws = XLSX.utils.aoa_to_sheet([
-                        ['ชื่อที่แสดง', 'ชื่อผู้ใช้งาน', 'รหัสผ่าน', 'role (pea หรือ admin)'],
-                        ['ตัวอย่าง สมชาย ใจดี', 'somchai.j', 'Password123', 'pea'],
-                    ]);
-                    const wb = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(wb, ws, 'Users');
-                    XLSX.writeFile(wb, 'user_import_template.xlsx');
-                },
-
-                exportUsers() {
-                    const rows = this.users.map(u => ({
-                        'ชื่อที่แสดง': u.displayName,
-                        'ชื่อผู้ใช้งาน': u.username,
-                        'สิทธิ์': this.roleLabel(u.role),
-                    }));
-                    const ws = XLSX.utils.json_to_sheet(rows);
-                    const wb = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(wb, ws, 'Users');
-                    XLSX.writeFile(wb, 'user_list_export.xlsx');
-                },
-
-                // เปิด pop-up แก้ไขผู้ใช้งาน (ชื่อที่แสดง/สิทธิ์/รหัสผ่านใหม่) — เข้าจากปุ่มฟันเฟืองในตาราง
-                openEditUserModal(row) {
-                    this.editUserForm = { username: row.username, displayName: row.displayName, role: row.role, password: '', saving: false, error: '' };
-                    this.showEditUserModal = true;
-                },
-                closeEditUserModal() {
-                    this.showEditUserModal = false;
-                },
-                async saveEditUserModal() {
-                    const f = this.editUserForm;
-                    f.saving = true;
-                    f.error = '';
-                    try {
-                        await this.api('updateUser', {
-                            username: f.username,
-                            displayName: f.displayName,
-                            role: f.role,
-                            password: f.password || undefined,
-                        });
-                        this.showEditUserModal = false;
-                        await this.loadUsers();
-                    } catch (err) {
-                        f.error = err.message;
-                        f.saving = false;
-                    }
-                },
-                // pop-up ยืนยันลบ — ซ้อนบน pop-up แก้ไข แทนการใช้ confirm() ของเบราว์เซอร์แบบเดิม
-                openDeleteUserConfirm() {
-                    this.deleteUserError = '';
-                    this.showDeleteUserConfirm = true;
-                },
-                closeDeleteUserConfirm() {
-                    this.showDeleteUserConfirm = false;
-                },
-                async deleteUserConfirmed() {
-                    this.deletingUser = true;
-                    this.deleteUserError = '';
-                    try {
-                        await this.api('deleteUser', { username: this.editUserForm.username });
-                        this.showDeleteUserConfirm = false;
-                        this.showEditUserModal = false;
-                        await this.loadUsers();
-                    } catch (err) {
-                        this.deleteUserError = err.message;
-                    } finally {
-                        this.deletingUser = false;
-                    }
-                },
-
-                async submitNewUser() {
-                    const f = this.newUserForm;
-                    if (!f.username || !f.password || !f.displayName) {
-                        f.error = 'กรุณากรอกให้ครบทุกช่อง';
-                        return;
-                    }
-                    f.saving = true;
-                    f.error = '';
-                    try {
-                        await this.api('createUser', {
-                            username: f.username, password: f.password, displayName: f.displayName, role: f.role,
-                        });
-                        this.newUserForm = { username: '', password: '', displayName: '', role: 'pea', saving: false, error: '' };
-                        await this.loadUsers();
-                    } catch (err) {
-                        f.error = err.message;
-                        f.saving = false;
-                    }
-                },
-
-                async updateStatus(item) {
-                    try {
-                        await this.api('updateCmTicketStatus', { ticketId: item.ticketId, status: item.status });
-                        await this.loadDashboard(this.currentImportId);
-                    } catch (err) {
-                        alert('อัปเดตสถานะไม่สำเร็จ: ' + err.message);
-                    }
-                },
-
-                async openTicketDetail(item) {
-                    this.showTicketModal = true;
-                    this.ticketDetail = null;
-                    this.ticketDetailLoading = true;
-                    try {
-                        this.ticketDetail = await this.api('getWorkOrderDetail', { importId: this.currentImportId, ticketId: item.ticketId });
-                    } catch (err) {
-                        this.ticketDetail = null; // treat any error the same as "no extra detail" rather than blocking the modal
-                    } finally {
-                        this.ticketDetailLoading = false;
-                    }
-                },
-                closeTicketModal() {
-                    this.showTicketModal = false;
-                    this.ticketDetail = null;
-                },
-
-                /** ข้อ 3: เพิ่มใบงาน CM ด้วยมือ (admin) — ไม่บังคับกรอกครบทุกช่อง เขียนตรงลงชีท CMTickets ของรอบที่เลือกอยู่ */
-                openAddCmModal() {
-                    this.addCmForm = { ticketId: '', site: '', province: '', system: '', reportedAt: '', status: 'รอดำเนินการ', saving: false, error: '', siteSuggestOpen: false, provinceSuggestOpen: false };
-                    this.showAddCmModal = true;
-                },
-                closeAddCmModal() {
-                    this.showAddCmModal = false;
-                },
-                async submitAddCmTicket() {
-                    const f = this.addCmForm;
-                    if (!this.currentImportId) {
-                        f.error = 'ยังไม่มีรอบข้อมูลให้ผูกรายการนี้ — นำเข้าข้อมูล Excel อย่างน้อย 1 รอบก่อน';
-                        return;
-                    }
-                    f.saving = true;
-                    f.error = '';
-                    try {
-                        await this.api('createCmTicket', {
-                            importId: this.currentImportId,
-                            ticketId: f.ticketId || undefined,
-                            site: f.site || undefined,
-                            province: f.province || undefined,
-                            system: f.system || undefined,
-                            reportedAt: f.reportedAt || undefined,
-                            status: f.status,
-                        });
-                        this.showAddCmModal = false;
-                        await this.loadDashboard(this.currentImportId);
-                    } catch (err) {
-                        f.error = err.message;
-                    } finally {
-                        f.saving = false;
-                    }
-                },
-
-                /** ข้อ 4: แก้ไข สถานที่ติดตั้ง/จังหวัด ของแถวในตาราง InstallationSites (admin) — เขียนตรงลงชีท InstallationSites_Snapshot */
-                openEditSiteModal(item) {
-                    this.editSiteForm = { no: item.no, location: item.location, province: item.province || '', saving: false, error: '', locationSuggestOpen: false, provinceSuggestOpen: false };
-                    this.showEditSiteModal = true;
-                },
-                closeEditSiteModal() {
-                    this.showEditSiteModal = false;
-                },
-                async submitEditSite() {
-                    const f = this.editSiteForm;
-                    f.saving = true;
-                    f.error = '';
-                    try {
-                        await this.api('updateInstallationSite', {
-                            importId: this.currentImportId,
-                            no: f.no,
-                            location: f.location,
-                            province: f.province,
-                        });
-                        this.showEditSiteModal = false;
-                        await this.loadDashboard(this.currentImportId);
-                    } catch (err) {
-                        f.error = err.message;
-                    } finally {
-                        f.saving = false;
-                    }
-                },
-
-                /** แปลงค่าวันที่ (จากชีท/API) ให้เป็นสตริงที่ input type="datetime-local" รับได้ (YYYY-MM-DDTHH:mm ตามเวลาท้องถิ่น) */
-                toDateTimeLocalValue(value) {
-                    if (!value) return '';
-                    const d = new Date(value);
-                    if (isNaN(d)) return '';
-                    const pad = n => String(n).padStart(2, '0');
-                    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-                },
-
-                /** ปุ่มฟันเฟือง (แก้ไข) ในตาราง "รายการแจ้งซ่อม CM" — แก้ไขข้อมูลเต็มของใบงานนั้น เขียนตรงลงชีท CMTickets */
-                openEditCmModal(item) {
-                    this.editCmForm = {
-                        ticketId: item.ticketId,
-                        site: item.site || '',
-                        province: item.province || '',
-                        system: item.system || '',
-                        reportedAt: this.toDateTimeLocalValue(item.reportedAt),
-                        status: item.status || 'รอดำเนินการ',
-                        saving: false, error: '', siteSuggestOpen: false, provinceSuggestOpen: false,
-                    };
-                    this.showEditCmModal = true;
-                },
-                closeEditCmModal() {
-                    this.showEditCmModal = false;
-                },
-                async submitEditCmTicket() {
-                    const f = this.editCmForm;
-                    f.saving = true;
-                    f.error = '';
-                    try {
-                        await this.api('updateCmTicket', {
-                            ticketId: f.ticketId,
-                            site: f.site,
-                            province: f.province,
-                            system: f.system,
-                            reportedAt: f.reportedAt || undefined,
-                            status: f.status,
-                        });
-                        this.showEditCmModal = false;
-                        await this.loadDashboard(this.currentImportId);
-                    } catch (err) {
-                        f.error = err.message;
-                    } finally {
-                        f.saving = false;
-                    }
-                },
-
-                /**
-                 * ข้อ 4: ย่อ/แปลงชื่อสถานที่ให้อ่านง่ายขึ้นสำหรับแสดงในตาราง (best-effort ตามตัวอย่างที่ให้มา)
-                 * เช่น "สฟฟ.บ้านลาดทราย Base Station" -> "สถานีไฟฟ้า บ้านลาดทราย"
-                 *      "กฟก.1 อาคาร 3 ชั้น 2 Server Room MSO" -> "การไฟฟ้าส่วนภูมิภาค เขต 1 ภาคกลาง"
-                 *      "กฟอ.ธัญบุรี Base Station" -> "การไฟฟ้าส่วนภูมิภาคสาขาธัญบุรี"
-                 * หมายเหตุ: ชื่อดิบเดิมจากไฟล์ยังเก็บไว้ครบ (ใช้ในการค้นหา/ผูกข้อมูล) นี่แค่ทำ label แสดงผลเท่านั้น
-                 */
-                friendlySiteName(name) {
-                    const s = String(name || '').trim();
-                    if (!s) return '-';
-                    let m = s.match(/^กฟก\.\s*(\d+)/);
-                    if (m) return 'การไฟฟ้าส่วนภูมิภาค เขต ' + m[1] + ' ภาคกลาง';
-                    m = s.match(/^กฟอ\.\s*(\S+)/);
-                    if (m) return 'การไฟฟ้าส่วนภูมิภาคสาขา' + m[1];
-                    m = s.match(/^สฟฟ\.\s*(\S+)/);
-                    if (m) return 'สถานีไฟฟ้าส่วนภูมิภาค ' + m[1];
-                    return s;
-                },
-
-                displayStatus(item) {
-                    if (item.status !== 'เสร็จสิ้น' && item.slaHoursLeft < 0) return 'เกิน SLA';
-                    return item.status;
-                },
-                formatSlaTime(item) {
-                    if (item.status === 'เสร็จสิ้น') return 'ดำเนินการเสร็จแล้ว';
-                    if (item.slaHoursLeft < 0) return `เกินกำหนด ${Math.abs(item.slaHoursLeft)} ชม.`;
-                    return `เหลืออีก ${item.slaHoursLeft} ชม.`;
-                },
-                getSlaBadgeClass(item) {
-                    if (item.status === 'เสร็จสิ้น') return 'bg-slate-100 text-slate-600';
-                    if (item.slaHoursLeft < 0) return 'bg-red-100 text-red-700 animate-pulse';
-                    if (item.slaHoursLeft <= 4) return 'bg-amber-100 text-amber-800';
-                    return 'bg-emerald-100 text-emerald-800';
-                },
-                getStatusBadgeClass(status) {
-                    if (status === 'เสร็จสิ้น') return 'bg-emerald-100 text-emerald-700';
-                    if (status === 'กำลังดำเนินการ') return 'bg-blue-100 text-blue-700';
-                    if (status === 'งาน PM') return 'bg-purple-100 text-purple-700';
-                    if (status === 'รออนุมัติ') return 'bg-amber-100 text-amber-700';
-                    if (status === 'เกิน SLA') return 'bg-red-100 text-red-700';
-                    return 'bg-slate-100 text-slate-700';
-                },
-                formatDate(value) {
-                    if (!value) return '-';
-                    const d = new Date(value);
-                    if (isNaN(d)) return String(value);
-                    return d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
-                },
-                formatMonthYearThai(value) {
-                    if (!value) return '-';
-                    const d = new Date(value);
-                    if (isNaN(d)) return String(value);
-                    return THAI_MONTHS[d.getMonth()] + ' ' + (d.getFullYear() + 543);
-                },
-                formatDateTime(value) {
-                    if (!value) return '-';
-                    const d = new Date(value);
-                    if (isNaN(d)) return String(value);
-                    return d.toLocaleString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-                },
-
-                renderMainCharts() {
-                    // เดิมถ้า Chart.js โหลดไม่สำเร็จ (เช่นไฟล์ vendor/chart.umd.min.js หาย/พาธผิด)
-                    // หรือ renderOverallChart/renderProvinceChart โยน error ใดๆ กราฟจะค้างว่างเปล่าแบบเงียบๆ
-                    // ไม่มีทางรู้ได้จากหน้าเว็บเลยว่าเกิดอะไรขึ้น — ตอนนี้จับ error แล้วโชว์ข้อความให้เห็นแทน
-                    this.chartsError = '';
-                    try {
-                        if (typeof Chart === 'undefined') {
-                            throw new Error('โหลดไลบรารี Chart.js ไม่สำเร็จ (เช็คว่าไฟล์ vendor/chart.umd.min.js อยู่ครบและ path ถูกต้องหรือไม่ — ดู vendor/README_DOWNLOAD_VENDOR_FILES.md)');
-                        }
-                        this.renderOverallChart();
-                        this.renderProvinceChart();
-                    } catch (err) {
-                        this.chartsError = err.message;
-                        console.error('renderMainCharts failed:', err);
-                    }
-                },
-
-                /** CM tickets grouped into the 3 severity buckets used by the donut + province chart. */
-                cmSeverityCounts() {
-                    const counts = { active: 0, done: 0, overdue: 0 };
-                    this.dashboard.cmTickets.forEach(t => {
-                        const s = this.displayStatus(t);
-                        if (s === 'เกิน SLA') counts.overdue++;
-                        else if (s === 'เสร็จสิ้น') counts.done++;
-                        else counts.active++; // รอดำเนินการ / รออนุมัติ / กำลังดำเนินการ — all still "กำลังทำ" from an overview standpoint
-                    });
-                    return counts;
-                },
-
-                /** ข้อ 6: PM vs CM donut, with click-to-drill-down into either side. */
-                renderOverallChart() {
-                    const canvas = document.getElementById('overallChart');
-                    if (!canvas) return;
-                    if (this.charts.overall) this.charts.overall.destroy();
-
-                    let labels, values, colors;
-                    if (this.donutFilter === 'pm') {
-                        const totals = this.dashboard.pmStatus.reduce(
-                            (acc, p) => ({ total: acc.total + (Number(p.total) || 0), done: acc.done + (Number(p.done) || 0) }),
-                            { total: 0, done: 0 }
-                        );
-                        labels = ['PM เสร็จสิ้น', 'PM ค้างดำเนินการ'];
-                        values = [totals.done, totals.total - totals.done];
-                        colors = ['#8b5cf6', '#ddd6fe'];
-                    } else if (this.donutFilter === 'cm') {
-                        const cm = this.cmSeverityCounts();
-                        labels = ['CM กำลังทำ', 'CM แก้ไขเสร็จ', 'CM เกิน SLA'];
-                        values = [cm.active, cm.done, cm.overdue];
-                        colors = ['#f87171', '#fecaca', '#b91c1c'];
-                    } else {
-                        const pmTotal = this.dashboard.pmStatus.reduce((sum, p) => sum + (Number(p.total) || 0), 0);
-                        const cm = this.cmSeverityCounts();
-                        labels = ['PM', 'CM กำลังทำ', 'CM แก้ไขเสร็จ', 'CM เกิน SLA'];
-                        values = [pmTotal, cm.active, cm.done, cm.overdue];
-                        colors = ['#8b5cf6', '#f87171', '#fecaca', '#b91c1c'];
-                    }
-
-                    // Drop zero-value slices so the donut isn't cluttered by statuses that never occurred this round
-                    const slices = labels
-                        .map((l, i) => ({ label: l, value: values[i], color: colors[i] }))
-                        .filter(x => x.value > 0);
-                    const total = slices.reduce((s, x) => s + x.value, 0);
-
-                    this.charts.overall = new Chart(canvas, {
-                        type: 'doughnut',
-                        data: {
-                            labels: slices.map(x => x.label),
-                            datasets: [{ data: slices.map(x => x.value), backgroundColor: slices.map(x => x.color) }],
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: { display: false }, // ใช้ legend แบบเขียนเอง (htmlLegendPlugin) ด้านล่างกราฟแทน
-                                htmlLegend: { containerID: 'overallChartLegend' },
-                                tooltip: {
-                                    callbacks: {
-                                        label: (item) => {
-                                            const pct = total ? Math.round((item.parsed / total) * 100) : 0;
-                                            return item.label + ': ' + item.parsed + ' งาน (' + pct + '%)';
-                                        },
-                                    },
-                                },
-                            },
-                            onClick: (evt, elements) => {
-                                if (!elements.length || this.donutFilter !== 'all') return;
-                                const clicked = slices[elements[0].index];
-                                if (clicked.label === 'PM') {
-                                    this.donutFilter = 'pm';
-                                    this.provinceViewMetric = 'pm';
-                                } else {
-                                    this.donutFilter = 'cm';
-                                    this.provinceViewMetric = 'cm';
-                                }
-                                this.renderOverallChart();
-                            },
-                        },
-                        plugins: [htmlLegendPlugin],
-                    });
-                },
-                resetDonut() {
-                    this.donutFilter = 'all';
-                    this.renderOverallChart();
-                },
-
-                /** Simple "contains" filter behind the custom autocomplete dropdowns (site name / province fields). */
-                matchSuggestions(list, query) {
-                    const q = String(query || '').trim().toLowerCase();
-                    if (!q) return list.slice(0, 8);
-                    return list.filter(item => item.toLowerCase().includes(q)).slice(0, 8);
-                },
-
-                /** ข้อ 4/5: ย่อชื่อสถานที่ให้สั้นลงสำหรับแสดงบนแกนกราฟ (เป็น best-effort — ชื่อที่ไม่เข้ารูปแบบที่รู้จักจะคงไว้ตามเดิม) */
-                abbreviateSiteLabel(name) {
-                    let s = String(name || '').trim();
-                    if (!s) return '';
-                    // ตัดคำต่อท้ายจำพวกอาคาร/ชั้น/ประเภทห้อง/เฟส ออกทั้งหมดตั้งแต่จุดที่เจอ
-                    s = s.replace(/\s+(Base\s*Station|Server\s*Room|Ph\.?\s*\d+|อาคาร\s*\S*|ชั้น\s*\S*|MSO|BTS|DPC)\b.*$/i, '').trim();
-                    let m = s.match(/^(กฟก\.\s*\d+)/);
-                    if (m) return m[1].replace(/\s+/g, '');
-                    m = s.match(/^(กฟอ\.\s*\S+)/);
-                    if (m) return m[1];
-                    m = s.match(/^สฟฟ\.\s*(.+)$/);
-                    if (m) return m[1].trim();
-                    return s || String(name);
-                },
-                /** ขึ้นบรรทัดใหม่เฉพาะเมื่อ label ย่อแล้วยังยาวเกินไป และมีช่องว่างให้ตัดคำได้ */
-                chartLabelLines(name) {
-                    const abbrev = this.abbreviateSiteLabel(name);
-                    if (abbrev.length <= 10) return abbrev;
-                    const parts = abbrev.split(/\s+/).filter(Boolean);
-                    return parts.length > 1 ? parts : abbrev;
-                },
-                /** สีคงที่ต่อประเภทอุปกรณ์ (BTS/MSO/DPC ฯลฯ) ให้สีเดิมทุกครั้งที่ประเภทเดียวกัน */
-                colorForEquipmentType(type) {
-                    const palette = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1', '#14b8a6'];
-                    let hash = 0;
-                    for (let i = 0; i < type.length; i++) hash = (hash * 31 + type.charCodeAt(i)) >>> 0;
-                    return palette[hash % palette.length];
-                },
-
-                /** ข้อ 4/5/7: กราฟ "สถิติอุปกรณ์และสถานะงานแยกตามจังหวัด" — 2 แท่งต่อหมวด (อุปกรณ์ / CM หรือ PM) */
-                renderProvinceChart() {
-                    const canvas = document.getElementById('siteChart');
-                    if (!canvas) return;
-                    if (this.charts.site) this.charts.site.destroy();
-
-                    let rows, labelFn;
-                    if (this.siteFilter) {
-                        rows = this.provinceStats.bySite.filter(s => s.site === this.siteFilter && s.province === this.provinceFilter);
-                        labelFn = r => this.chartLabelLines(r.site);
-                    } else if (this.provinceFilter) {
-                        rows = this.provinceStats.bySite
-                            .filter(s => s.province === this.provinceFilter)
-                            .slice()
-                            .sort((a, b) => b.equipmentTotal - a.equipmentTotal)
-                            .slice(0, 10);
-                        labelFn = r => this.chartLabelLines(r.site);
-                    } else {
-                        rows = this.provinceStats.byProvince.slice().sort((a, b) => b.equipmentTotal - a.equipmentTotal);
-                        labelFn = r => r.province;
-                    }
-
-                    if (!rows || rows.length === 0) return;
-
-                    const allTypes = Array.from(new Set(rows.flatMap(r => Object.keys(r.equipmentByType || {})))).sort();
-                    const equipmentDatasets = allTypes.map(type => ({
-                        stack: 'equipment',
-                        label: 'อุปกรณ์ - ' + type,
-                        data: rows.map(r => (r.equipmentByType && r.equipmentByType[type]) || 0),
-                        backgroundColor: this.colorForEquipmentType(type),
-                    }));
-
-                    let statusDatasets;
-                    if (this.provinceViewMetric === 'pm') {
-                        statusDatasets = [
-                            { stack: 'status', label: 'PM', data: rows.map(r => r.pmCount), backgroundColor: '#8b5cf6' },
-                        ];
-                    } else {
-                        statusDatasets = [
-                            { stack: 'status', label: 'CM กำลังทำ', data: rows.map(r => r.cm.active), backgroundColor: '#f87171' },
-                            { stack: 'status', label: 'CM แก้ไขเสร็จ', data: rows.map(r => r.cm.done), backgroundColor: '#fecaca' },
-                            { stack: 'status', label: 'CM เกิน SLA', data: rows.map(r => r.cm.overdue), backgroundColor: '#b91c1c' },
-                        ];
-                    }
-
-                    this.charts.site = new Chart(canvas, {
-                        type: 'bar',
-                        data: { labels: rows.map(labelFn), datasets: [...equipmentDatasets, ...statusDatasets] },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            // ข้อ 2: intersect: true + mode: 'point' ทำให้ tooltip โชว์เฉพาะ dataset ที่ชี้ตรงๆ
-                            // (ชี้แท่งอุปกรณ์ -> เห็นแค่จำนวนอุปกรณ์ประเภทนั้น, ชี้แท่ง CM/PM -> เห็นแค่สถานะนั้น) แทนที่จะรวมทุกอย่างมาแสดงพร้อมกัน
-                            interaction: { mode: 'point', intersect: true },
-                            scales: {
-                                x: { stacked: true, ticks: { maxRotation: 0, minRotation: 0, autoSkip: false, font: { size: 10 } } },
-                                y: { stacked: true, beginAtZero: true },
-                            },
-                            plugins: {
-                                legend: { labels: { boxWidth: 10, font: { size: 10 } } },
-                                tooltip: {
-                                    callbacks: {
-                                        title: (items) => {
-                                            if (!items.length) return '';
-                                            const r = rows[items[0].dataIndex];
-                                            return r.site ? r.site : r.province;
-                                        },
-                                        label: (item) => {
-                                            const ds = item.dataset;
-                                            if (ds.stack === 'equipment') return 'จำนวนอุปกรณ์ (' + ds.label.replace(/^อุปกรณ์ - /, '') + '): ' + item.parsed.y;
-                                            return ds.label + ': ' + item.parsed.y;
-                                        },
-                                        afterBody: (items) => {
-                                            if (!items.length) return [];
-                                            const item = items[0];
-                                            if (item.dataset.stack !== 'status' || this.provinceViewMetric !== 'pm') return [];
-                                            const r = rows[item.dataIndex];
-                                            if (!r.pmRecords || !r.pmRecords.length) return [];
-                                            return ['รอบ PM ที่ทำ:'].concat(
-                                                r.pmRecords.slice(0, 6).map(p => '- ' + this.formatDate(p.reportedAt) + ' (' + p.status + ')')
-                                            );
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    });
-                },
-
-                renderTrendChart() {
-                    const canvas = document.getElementById('trendChart');
-                    if (!canvas) return;
-                    if (this.charts.trend) this.charts.trend.destroy();
-                    this.charts.trend = new Chart(canvas, {
-                        type: 'line',
-                        data: {
-                            labels: this.trend.map(t => this.formatMonthYearThai(t.dataDate)),
-                            datasets: [
-                                { label: 'จำนวนอุปกรณ์รวม', data: this.trend.map(t => t.totalQuantity), borderColor: '#8b5cf6', tension: 0.3 },
-                                { label: '% PM เฉลี่ย', data: this.trend.map(t => t.avgPmPercent), borderColor: '#10b981', tension: 0.3 },
-                            ],
-                        },
-                        options: { responsive: true, maintainAspectRatio: false },
-                    });
-                },
-            },
-            watch: {
-                currentView(val, oldVal) {
-                    // ออกจากหน้าแดชบอร์ด: v-if="currentView === 'dashboard'" จะลบ <canvas> เดิมออกจาก
-                    // DOM ทั้งหมด ต้อง destroy Chart instance ก่อน ไม่งั้น listener เดิมจะค้างผูกกับ
-                    // canvas ที่ถูกลบไปแล้ว (ต้นเหตุ error "Cannot read properties of undefined
-                    // (reading 'handleEvent')" ที่เจอตอนกลับมาหน้าแดชบอร์ด)
-                    if (oldVal === 'dashboard' && val !== 'dashboard') {
-                        ['overall', 'site', 'trend'].forEach((key) => {
-                            if (this.charts[key]) { this.charts[key].destroy(); this.charts[key] = null; }
-                        });
-                    }
-                    // กลับมาหน้าแดชบอร์ด: <canvas> ที่ Vue สร้างขึ้นใหม่ยังไม่มีกราฟใดๆ วาดอยู่เลย ต้องวาดใหม่
-                    if (val === 'dashboard') {
-                        this.$nextTick(() => {
-                            this.renderMainCharts();
-                            if (this.showTrend) this.renderTrendChart();
-                        });
-                    }
-                    // (lazy-load, ข้อ 5.2) เปิดแท็บ "จัดการผู้ใช้งาน": bootstrap ไม่ได้ส่งรายชื่อ user
-                    // (`getUsers_()` อ่านทั้งชีท Users ทุกครั้ง แต่ไม่ได้ใช้ที่หน้าแดชบอร์ดหลักเลย)
-                    // มาให้แล้ว — โหลดตรงนี้แทน ทุกครั้งที่เปิดแท็บ (เหมือน showTrend ด้านล่าง) เพื่อให้
-                    // รายชื่อ user สดใหม่เสมอ ไม่ใช่โหลดครั้งเดียวค้างไว้ (sheetLinks ยังมากับ bootstrap
-                    // ตามเดิม เพราะปุ่ม "เปิด Google Sheet" ใช้ตรงในหน้าแดชบอร์ดหลัก ไม่ใช่แค่แท็บนี้)
-                    if (val === 'users' && this.session && this.session.role === 'admin') {
-                        this.loadUsers();
-                    }
-                },
-                showTrend(val) {
-                    if (val) this.loadTrend();
-                },
-                provinceFilter() {
-                    this.siteFilter = '';
-                    this.renderProvinceChart();
-                },
-                siteFilter() {
-                    this.renderProvinceChart();
-                },
-                provinceViewMetric() {
-                    this.renderProvinceChart();
-                },
-            },
-        }).mount('#app');
-    </script>
+<?!= include("script") ?>
 </body>
 </html>
