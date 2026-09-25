@@ -821,7 +821,68 @@ let progressCache=[];
 async function loadProgress(){if(!AUTH.token)return;const r=await api(ACT.getProgress,{});if(r&&r.ok&&Array.isArray(r.progress)){progressCache=r.progress;renderSavedProgress();renderOverviewDash();renderLeaderDashboard();}}
 document.addEventListener('DOMContentLoaded',()=>{const df=$('#dashMainFilter');if(df)df.addEventListener('change',renderDashboard);});
 
-function renderDashboard(){if(!canSeeDashboard())return;const role=(AUTH.user&&AUTH.user.role)||'';const leaderProjs=(role==='leader')?(AUTH.user?.project||'').split(',').map(p=>p.trim()).filter(Boolean):[];const baseEntries=(role==='leader'&&leaderProjs.length>0)?entries.filter(e=>leaderProjs.includes(e.project)):entries;let withImg=0,days={};baseEntries.forEach(e=>{if(e.imgMain||e.imgSticker)withImg++;const d=new Date(e.createdAt);const key=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;days[key]=(days[key]||0)+1;});const total=baseEntries.length;const projCount=uniq(baseEntries.map(e=>e.project)).filter(Boolean).length;const td=new Date();const tkey=`${td.getFullYear()}-${pad(td.getMonth()+1)}-${pad(td.getDate())}`;const todayN=days[tkey]||0;$('#kpiRow').innerHTML='';const allProjs=uniq(baseEntries.map(e=>e.project)).filter(Boolean).sort();const df=$('#dashMainFilter');if(df){const cur=df.value;df.innerHTML='<option value="__all">All Projects</option>'+allProjs.map(p=>`<option value="${escAttr(p)}">${esc(p)}</option>`).join('');df.value=cur;}renderOverviewDash();renderLeaderDashboard();renderStatusDonut(baseEntries);renderDailyChart(baseEntries);}
+function renderDashboard(){if(!canSeeDashboard())return;const role=(AUTH.user&&AUTH.user.role)||'';const leaderProjs=(role==='leader')?(AUTH.user?.project||'').split(',').map(p=>p.trim()).filter(Boolean):[];const baseEntries=(role==='leader'&&leaderProjs.length>0)?entries.filter(e=>leaderProjs.includes(e.project)):entries;let withImg=0,days={};baseEntries.forEach(e=>{if(e.imgMain||e.imgSticker)withImg++;const d=new Date(e.createdAt);const key=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;days[key]=(days[key]||0)+1;});const total=baseEntries.length;const projCount=uniq(baseEntries.map(e=>e.project)).filter(Boolean).length;const td=new Date();const tkey=`${td.getFullYear()}-${pad(td.getMonth()+1)}-${pad(td.getDate())}`;const todayN=days[tkey]||0;
+$('#kpiRow').innerHTML=[
+  {lbl:'Total Records',n:total,color:'#D93A2B'},
+  {lbl:'Projects',n:projCount,color:'#2563EB'},
+  {lbl:'Today',n:todayN,color:'#16A34A'},
+  {lbl:'With Photos',n:withImg,color:'#D97706'},
+].map(k=>`<div class="kpi" style="border-left:4px solid ${k.color}"><div style="font-size:12px;color:var(--ink-soft)">${k.lbl}</div><div class="k-num" style="color:${k.color}">${k.n}</div></div>`).join('');
+const allProjs=uniq(baseEntries.map(e=>e.project)).filter(Boolean).sort();const df=$('#dashMainFilter');if(df){const cur=df.value;df.innerHTML='<option value="__all">All Projects</option>'+allProjs.map(p=>`<option value="${escAttr(p)}">${esc(p)}</option>`).join('');df.value=cur;}renderOverviewDash();renderLeaderDashboard();renderStatusDonut(baseEntries);renderDailyChart(baseEntries);const baseMaster=(role==='leader'&&leaderProjs.length>0)?master.filter(m=>leaderProjs.includes(m.project)):master;fillDashEquipLocFilter(baseMaster);renderDashEquipTable(baseMaster);renderGanttChart();}
+let ganttChartInst=null;
+function fmtGanttDate(ts){const d=new Date(ts);return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;}
+function renderGanttChart(){
+  const card=$('#ganttCard'),canvas=$('#ganttCanvas');if(!card||!canvas||typeof Chart==='undefined')return;
+  const role=(AUTH.user&&AUTH.user.role)||'';
+  const leaderProjs=(role==='leader')?(AUTH.user?.project||'').split(',').map(p=>p.trim()).filter(Boolean):[];
+  const deadlines=targetsCache.filter(t=>t.username==='__project__'&&t.deadline);
+  const rows=deadlines.filter(t=>!leaderProjs.length||leaderProjs.includes(t.project)).map(t=>{
+    const projEntries=entries.filter(e=>e.project===t.project);
+    const starts=projEntries.map(e=>e.createdAt).filter(Boolean);
+    const end=new Date(t.deadline).getTime();
+    const start=starts.length?Math.min(...starts):end-14*86400000;
+    const daysLeft=Math.ceil((end-Date.now())/86400000);
+    const color=daysLeft<0?'#EF4444':daysLeft<=14?'#F97316':'#2E9E6B';
+    return {project:t.project,start:Math.min(start,end),end,color,daysLeft};
+  }).sort((a,b)=>a.end-b.end);
+  if(!rows.length){card.style.display='none';return;}
+  card.style.display='';
+  $('#ganttWrap').style.height=Math.max(120,rows.length*46+40)+'px';
+  if(ganttChartInst)ganttChartInst.destroy();
+  ganttChartInst=new Chart(canvas,{
+    type:'bar',
+    data:{labels:rows.map(r=>r.project),datasets:[{data:rows.map(r=>[r.start,r.end]),backgroundColor:rows.map(r=>r.color),borderRadius:4,barThickness:22}]},
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      onClick:(evt,els)=>{if(els.length)filterRecordsByProjectStatus(rows[els[0].index].project,'');},
+      onHover:(evt,els)=>{evt.native.target.style.cursor=els.length?'pointer':'default';},
+      scales:{
+        x:{type:'linear',ticks:{callback:v=>fmtGanttDate(v),maxRotation:0,autoSkip:true,font:{size:10.5}}},
+        y:{grid:{display:false}}
+      },
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>{const r=rows[ctx.dataIndex];const dueTxt=r.daysLeft<0?`${Math.abs(r.daysLeft)} days overdue`:`${r.daysLeft} days left`;return `${fmtGanttDate(r.start)} → ${fmtGanttDate(r.end)} (${dueTxt})`;}}}
+      }
+    },
+    plugins:[{
+      id:'todayLine',
+      afterDraw(chart){
+        const xScale=chart.scales.x,yScale=chart.scales.y;
+        if(!xScale||!yScale)return;
+        const now=Date.now();
+        if(now<xScale.min||now>xScale.max)return;
+        const x=xScale.getPixelForValue(now);
+        const ctx=chart.ctx;
+        ctx.save();ctx.strokeStyle='#161B22';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
+        ctx.beginPath();ctx.moveTo(x,yScale.top);ctx.lineTo(x,yScale.bottom);ctx.stroke();
+        ctx.setLineDash([]);ctx.fillStyle='#161B22';ctx.font='10px sans-serif';ctx.textAlign='center';
+        ctx.fillText('Today',x,yScale.top-4);
+        ctx.restore();
+      }
+    }]
+  });
+}
 let statusDonutInst=null;
 function renderStatusDonut(list){
   const canvas=$('#statusDonutCanvas');if(!canvas||typeof Chart==='undefined')return;
@@ -834,11 +895,40 @@ function renderStatusDonut(list){
       cutout:'62%',responsive:true,maintainAspectRatio:false,
       onClick:(evt,els)=>{if(els.length)filterRecordsByStatus(els[0].index===0?'confirmed':'pending');},
       onHover:(evt,els)=>{evt.native.target.style.cursor=els.length?'pointer':'default';},
-      plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}}
+      plugins:{legend:{display:false}}
     }
   });
-  const legend=$('#statusDonutLegend');if(legend)legend.textContent=`${confirmed} confirmed · ${pending} pending`;
+  const rows=[{label:'Confirmed',n:confirmed,color:'#2E9E6B',status:'confirmed'},{label:'Pending Review',n:pending,color:'#F97316',status:'pending'}];
+  const wrap=$('#statusDonutList');
+  if(wrap)wrap.innerHTML=rows.map(r=>`<div onclick="filterRecordsByStatus('${r.status}')" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 0"><div style="width:10px;height:10px;border-radius:50%;background:${r.color};flex:none"></div><div style="flex:1;font-size:13px">${r.label}</div><div style="font-size:14px;font-weight:700">${r.n}</div></div>`).join('');
 }
+function filterRecordsByProjectStatus(project,status){
+  recordsStatusFilter=status||null;recordsDateFilter=null;
+  goTab('saved');
+  fillSavedFilters();
+  const sel=$('#savedFProject');if(sel)sel.value=project;
+  renderSaved();
+}
+/* ─── EQUIPMENT BY LOCATION (Overview) — filterable, scrollable table of Master Data ── */
+let _dashEquipMaster=null;
+function fillDashEquipLocFilter(scopedMaster){
+  if(scopedMaster)_dashEquipMaster=scopedMaster;
+  const sel=$('#dashEquipLocFilter');if(!sel)return;
+  const prev=sel.value;
+  const locs=uniq((_dashEquipMaster||master).map(m=>m.locName)).filter(Boolean).sort((a,b)=>a.localeCompare(b,'th'));
+  sel.innerHTML='<option value="">All Locations</option>'+locs.map(l=>`<option value="${escAttr(l)}">${esc(l)}</option>`).join('');
+  if(locs.includes(prev))sel.value=prev;
+}
+function renderDashEquipTable(scopedMaster){
+  if(scopedMaster)_dashEquipMaster=scopedMaster;
+  const wrap=$('#dashEquipTableWrap');if(!wrap)return;
+  const loc=$('#dashEquipLocFilter')?$('#dashEquipLocFilter').value:'';
+  const list=(_dashEquipMaster||master).filter(m=>!loc||m.locName===loc);
+  if(!list.length){wrap.innerHTML='<div style="padding:20px 0;text-align:center;font-size:12.5px;color:var(--ink-faint)">No equipment</div>';return;}
+  const rows=list.map(m=>`<tr><td style="padding:6px 8px;font-size:12px">${esc(m.equipment||'-')}</td><td style="padding:6px 8px;font-size:11.5px;color:var(--ink-soft)">${esc(m.locName||'-')}${m.subName?' › '+esc(m.subName):''}</td><td style="padding:6px 8px;font-size:11px;color:var(--ink-faint);font-family:monospace">${esc(m.serial||'-')}</td></tr>`).join('');
+  wrap.innerHTML=`<table style="width:100%;border-collapse:collapse"><thead style="position:sticky;top:0;background:var(--surface)"><tr style="border-bottom:1px solid var(--line-soft)"><th style="padding:4px 8px;text-align:left;font-size:11px;color:var(--ink-faint);font-weight:600">Equipment</th><th style="padding:4px 8px;text-align:left;font-size:11px;color:var(--ink-faint);font-weight:600">Location</th><th style="padding:4px 8px;text-align:left;font-size:11px;color:var(--ink-faint);font-weight:600">Serial</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+$('#dashEquipLocFilter')?.addEventListener('change',renderDashEquipTable);
 
 function renderProgress(){const df=$('#dashMainFilter');const pick=df?df.value:'__all';const list=(!pick||pick==='__all')?progressCache:progressCache.filter(p=>p.project===pick);const tot=list.reduce((a,p)=>a+p.total,0),done=list.reduce((a,p)=>a+p.done,0),remain=Math.max(0,tot-done),pct=tot?Math.round(done/tot*100):0;$('#progSummary').innerHTML=`<div class="prog-cards"><div class="prog-c"><div class="v">${tot}</div><div>Total</div></div><div class="prog-c"><div class="v" style="color:var(--ok)">${done}</div><div>Done</div></div><div class="prog-c"><div class="v" style="color:var(--danger)">${remain}</div><div>Remaining</div></div><div class="prog-c"><div class="v" style="color:var(--accent)">${pct}%</div><div>Progress</div></div></div>`;const pctEl=$('#progTotalPct');if(pctEl)pctEl.textContent=tot?pct+'%':'—';const chart=$('#progChart');if(!list.length){chart.innerHTML='';return;}chart.innerHTML=list.map(p=>{const w=p.total?Math.round(p.done/p.total*100):0;const color=w>=80?'#22C55E':w>=40?'#F97316':'#EF4444';return `<div class="prog-row"><span class="pl">${esc(p.project)}</span><div class="prog-track"><div class="prog-fill" style="width:${w}%;background:${color}"></div></div><span class="pn" style="color:${color};font-weight:600">${p.done}/${p.total} (${w}%)</span></div>`;}).join('');}
 
@@ -854,7 +944,7 @@ function renderDailyChart(filtered){
   if(dailyChartInst)dailyChartInst.destroy();
   dailyChartInst=new Chart(canvas,{
     type:'bar',
-    data:{labels:dateKeys.map(dk=>dk.lbl),datasets:[{data:vals,backgroundColor:'#EE7C16',borderRadius:4,maxBarThickness:36}]},
+    data:{labels:dateKeys.map(dk=>dk.lbl),datasets:[{data:vals,backgroundColor:'#D93A2B',borderRadius:4,maxBarThickness:36}]},
     options:{
       responsive:true,maintainAspectRatio:false,
       onClick:(evt,els)=>{if(els.length)filterRecordsByDate(dateKeys[els[0].index].key);},
@@ -863,6 +953,12 @@ function renderDailyChart(filtered){
       plugins:{legend:{display:false},tooltip:{callbacks:{title:items=>dateKeys[items[0].dataIndex].lbl}}}
     }
   });
+  const tableWrap=$('#dailyTableWrap');
+  if(tableWrap){
+    const rows=dateKeys.map((dk,i)=>`<td onclick="filterRecordsByDate('${dk.key}')" style="cursor:pointer;text-align:center;padding:6px 4px;font-size:11.5px;color:${vals[i]?'var(--ink)':'var(--ink-faint)'};font-weight:${vals[i]?'700':'400'}">${vals[i]}</td>`).join('');
+    const labels=dateKeys.map(dk=>`<td style="text-align:center;padding:4px;font-size:10.5px;color:var(--ink-faint)">${dk.lbl}</td>`).join('');
+    tableWrap.innerHTML=`<table style="width:100%;border-collapse:collapse"><tbody><tr>${rows}</tr><tr style="border-top:1px solid var(--line-soft)">${labels}</tr></tbody></table>`;
+  }
 }
 
 function renderOverviewDash(){
@@ -960,7 +1056,7 @@ function renderSavedProgress(){const role=(AUTH.user&&AUTH.user.role)||'';const 
 /* ─── LEADER DONUT ──────────────────────────────────────── */
 const DONUT_COLORS=['#EE7C16','#3B82F6','#10B981','#8B5CF6','#EC4899','#F59E0B','#14B8A6','#6366F1','#EF4444','#84CC16'];
 let targetsCache=[];
-async function loadTargets(){if(!AUTH.token)return;const role=(AUTH.user&&AUTH.user.role)||'';if(!['admin','manager','leader'].includes(role))return;const r=await api('listTargets',{});if(r&&r.ok)targetsCache=r.targets||[];}
+async function loadTargets(){if(!AUTH.token)return;const role=(AUTH.user&&AUTH.user.role)||'';if(!['admin','manager','leader'].includes(role))return;const r=await api('listTargets',{});if(r&&r.ok){targetsCache=r.targets||[];renderGanttChart();}}
 function getTargetForProject(proj){const username=AUTH.user?.username||'',role=AUTH.user?.role||'';return targetsCache.find(t=>t.project===proj&&(role!=='leader'||t.username===username));}
 function getProjectDeadline(proj){return targetsCache.find(t=>t.project===proj&&t.username==='__project__')?.deadline||'';}
 async function loadAssignStats(){
