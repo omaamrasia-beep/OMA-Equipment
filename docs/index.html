@@ -121,7 +121,7 @@
   </div>
   <div class="kpi-row" id="kpiRow"></div>
   <div class="dash-card" id="ganttCard" style="margin-bottom:14px;display:none">
-    <div class="dc-head"><b>Project Timeline</b><span style="font-size:12px;color:var(--ink-soft)">First record → target due date</span></div>
+    <div class="dc-head"><b>Project Timeline</b></div>
     <div id="ganttWrap" style="position:relative"><canvas id="ganttCanvas"></canvas></div>
     <div style="display:flex;gap:16px;margin-top:12px;font-size:11px;color:var(--ink-soft)">
       <span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#2E9E6B;margin-right:5px"></span>On track</span>
@@ -135,20 +135,17 @@
     <div id="progChart" style="margin-top:14px"></div>
   </div>
   <div class="dash-card" style="margin-bottom:14px">
-    <div class="dc-head"><b>Daily Uploads</b><span id="dayRangeLbl" style="font-size:12px;color:var(--ink-soft)">Last 14 days · click a bar to filter Records by that day</span></div>
+    <div class="dc-head"><b>Daily Uploads</b><span id="dayRangeLbl" style="font-size:12px;color:var(--ink-soft)">Last 14 days</span></div>
     <div id="chartDaily" style="position:relative;height:220px"><canvas id="chartDailyCanvas"></canvas></div>
     <div id="dailyTableWrap" style="margin-top:14px;overflow-x:auto"></div>
   </div>
   <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px">
     <div class="dash-card" style="flex:1;min-width:300px;height:340px;display:flex;flex-direction:column">
       <div class="dc-head"><b>Status Breakdown</b></div>
-      <div style="display:flex;align-items:center;gap:20px">
-        <div style="position:relative;flex:none;width:140px;height:140px">
-          <canvas id="statusDonutCanvas" width="140" height="140" style="cursor:pointer"></canvas>
-        </div>
-        <div id="statusDonutList" style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px"></div>
+      <div id="statusDonutList" style="display:flex;gap:24px;flex-wrap:wrap"></div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:0">
+        <canvas id="statusDonutCanvas" width="140" height="140" style="cursor:pointer;width:140px;height:140px;flex:none"></canvas>
       </div>
-      <div style="font-size:11px;color:var(--ink-faint);margin-top:12px">Click a slice to filter Records by that status</div>
     </div>
     <div class="dash-card" style="flex:1.4;min-width:340px;height:340px;display:flex;flex-direction:column">
       <div class="dc-head"><b>Equipment by Location</b></div>
@@ -224,7 +221,6 @@
 
 <!-- ══════ PANEL: SAVED ══════ -->
 <section class="panel" id="panel-saved">
-  <div class="eyebrow">Records</div>
   <div class="panel-title">Records</div>
   <div class="ro-banner">Your account (observer) is view-only</div>
   <div id="savedProgress" class="dash-card" style="margin-bottom:14px;display:none">
@@ -309,7 +305,6 @@
 
 <!-- ══════ PANEL: MASTER ══════ -->
 <section class="panel" id="panel-master">
-  <div class="eyebrow">Master Data</div>
   <div class="panel-title">Master Data</div>
   <div class="flt-toolbar" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
     <input type="text" id="masterSearch" placeholder="Search master data…" style="flex:1;min-width:180px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:9px 12px;outline:none">

@@ -189,9 +189,10 @@ td.codecell{font-size:11.5px;color:var(--accent-deep)}
 .prog-c .v{font-size:24px;font-weight:700;line-height:1.1}
 .prog-track{flex:1;background:var(--line-soft);border-radius:6px;height:20px;overflow:hidden;position:relative}
 .prog-fill{height:100%;background:linear-gradient(90deg,#16A34A,#22C55E);border-radius:6px 0 0 6px;transition:width .5s}
-.prog-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.prog-row .pl{width:150px;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none;text-align:right;color:var(--ink-soft)}
-.prog-row .pn{font-size:11.5px;color:var(--ink-soft);width:90px;flex:none}
+.prog-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:14px}
+.prog-row .pl{width:170px;font-size:12.5px;flex:none;text-align:right;color:var(--ink-soft);line-height:1.35}
+.prog-row .prog-track{margin-top:3px}
+.prog-row .pn{font-size:11.5px;color:var(--ink-soft);width:90px;flex:none;margin-top:3px}
 
 /* ─── IO COLS ────────────────────────────────────────────── */
 .io-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}

@@ -55,7 +55,7 @@ function confirmDlg(message, okLabel, onOk){
       <div id="confirmDlgMsg" style="font-size:15px;color:#161B22;margin-bottom:20px;line-height:1.5"></div>
       <div style="display:flex;gap:10px;justify-content:flex-end">
         <button id="confirmDlgCancel" style="flex:1;padding:10px;border-radius:8px;background:#EBEEF2;color:#5B6573;font-weight:600;font-size:14px;cursor:pointer;border:none">Cancel</button>
-        <button id="confirmDlgOk" style="flex:1;padding:10px;border-radius:8px;background:#EE7C16;color:#fff;font-weight:600;font-size:14px;cursor:pointer;border:none">OK</button>
+        <button id="confirmDlgOk" style="flex:1;padding:10px;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;font-size:14px;cursor:pointer;border:none">OK</button>
       </div>
     </div>`;
     document.body.appendChild(dlg);
@@ -801,7 +801,7 @@ function openImageViewer(imgs){
       const nav=document.createElement('div');nav.style.cssText='display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center';
       const mkBtn=(txt,dis,fn)=>{const b=document.createElement('button');b.textContent=txt;b.style.cssText='padding:7px 16px;border-radius:8px;border:none;background:#fff;cursor:'+(dis?'default':'pointer')+';font-size:15px;opacity:'+(dis?.35:1);if(!dis)b.onclick=fn;return b;};
       nav.appendChild(mkBtn('◀',cur===0,()=>{cur--;render();}));
-      imgs.forEach((im,i)=>{const tb=document.createElement('div');tb.style.cssText='width:46px;height:46px;border-radius:6px;overflow:hidden;cursor:pointer;border:2.5px solid '+(i===cur?'#EE7C16':'rgba(255,255,255,.3)');const ti=document.createElement('img');ti.src=im.src;ti.style.cssText='width:100%;height:100%;object-fit:cover';tb.appendChild(ti);tb.onclick=()=>{cur=i;render();};nav.appendChild(tb);});
+      imgs.forEach((im,i)=>{const tb=document.createElement('div');tb.style.cssText='width:46px;height:46px;border-radius:6px;overflow:hidden;cursor:pointer;border:2.5px solid '+(i===cur?'#D93A2B':'rgba(255,255,255,.3)');const ti=document.createElement('img');ti.src=im.src;ti.style.cssText='width:100%;height:100%;object-fit:cover';tb.appendChild(ti);tb.onclick=()=>{cur=i;render();};nav.appendChild(tb);});
       nav.appendChild(mkBtn('▶',cur===imgs.length-1,()=>{cur++;render();}));
       ov.appendChild(nav);
     }
@@ -892,7 +892,7 @@ function renderStatusDonut(list){
     type:'doughnut',
     data:{labels:['Confirmed','Pending Review'],datasets:[{data:[confirmed,pending],backgroundColor:['#2E9E6B','#F97316'],borderWidth:0}]},
     options:{
-      cutout:'62%',responsive:true,maintainAspectRatio:false,
+      cutout:'62%',responsive:false,
       onClick:(evt,els)=>{if(els.length)filterRecordsByStatus(els[0].index===0?'confirmed':'pending');},
       onHover:(evt,els)=>{evt.native.target.style.cursor=els.length?'pointer':'default';},
       plugins:{legend:{display:false}}
@@ -900,7 +900,7 @@ function renderStatusDonut(list){
   });
   const rows=[{label:'Confirmed',n:confirmed,color:'#2E9E6B',status:'confirmed'},{label:'Pending Review',n:pending,color:'#F97316',status:'pending'}];
   const wrap=$('#statusDonutList');
-  if(wrap)wrap.innerHTML=rows.map(r=>`<div onclick="filterRecordsByStatus('${r.status}')" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 0"><div style="width:10px;height:10px;border-radius:50%;background:${r.color};flex:none"></div><div style="flex:1;font-size:13px">${r.label}</div><div style="font-size:14px;font-weight:700">${r.n}</div></div>`).join('');
+  if(wrap)wrap.innerHTML=rows.map(r=>`<div onclick="filterRecordsByStatus('${r.status}')" style="display:flex;align-items:center;gap:8px;cursor:pointer"><div style="width:10px;height:10px;border-radius:50%;background:${r.color};flex:none"></div><div style="font-size:13px">${r.label}</div><div style="font-size:14px;font-weight:700">${r.n}</div></div>`).join('');
 }
 function filterRecordsByProjectStatus(project,status){
   recordsStatusFilter=status||null;recordsDateFilter=null;
@@ -928,7 +928,7 @@ function renderDashEquipTable(scopedMaster){
   const rows=list.map(m=>`<tr><td style="padding:6px 8px;font-size:12px">${esc(m.equipment||'-')}</td><td style="padding:6px 8px;font-size:11.5px;color:var(--ink-soft)">${esc(m.locName||'-')}${m.subName?' › '+esc(m.subName):''}</td><td style="padding:6px 8px;font-size:11px;color:var(--ink-faint);font-family:monospace">${esc(m.serial||'-')}</td></tr>`).join('');
   wrap.innerHTML=`<table style="width:100%;border-collapse:collapse"><thead style="position:sticky;top:0;background:var(--surface)"><tr style="border-bottom:1px solid var(--line-soft)"><th style="padding:4px 8px;text-align:left;font-size:11px;color:var(--ink-faint);font-weight:600">Equipment</th><th style="padding:4px 8px;text-align:left;font-size:11px;color:var(--ink-faint);font-weight:600">Location</th><th style="padding:4px 8px;text-align:left;font-size:11px;color:var(--ink-faint);font-weight:600">Serial</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
-$('#dashEquipLocFilter')?.addEventListener('change',renderDashEquipTable);
+$('#dashEquipLocFilter')?.addEventListener('change',()=>renderDashEquipTable());
 
 function renderProgress(){const df=$('#dashMainFilter');const pick=df?df.value:'__all';const list=(!pick||pick==='__all')?progressCache:progressCache.filter(p=>p.project===pick);const tot=list.reduce((a,p)=>a+p.total,0),done=list.reduce((a,p)=>a+p.done,0),remain=Math.max(0,tot-done),pct=tot?Math.round(done/tot*100):0;$('#progSummary').innerHTML=`<div class="prog-cards"><div class="prog-c"><div class="v">${tot}</div><div>Total</div></div><div class="prog-c"><div class="v" style="color:var(--ok)">${done}</div><div>Done</div></div><div class="prog-c"><div class="v" style="color:var(--danger)">${remain}</div><div>Remaining</div></div><div class="prog-c"><div class="v" style="color:var(--accent)">${pct}%</div><div>Progress</div></div></div>`;const pctEl=$('#progTotalPct');if(pctEl)pctEl.textContent=tot?pct+'%':'—';const chart=$('#progChart');if(!list.length){chart.innerHTML='';return;}chart.innerHTML=list.map(p=>{const w=p.total?Math.round(p.done/p.total*100):0;const color=w>=80?'#22C55E':w>=40?'#F97316':'#EF4444';return `<div class="prog-row"><span class="pl">${esc(p.project)}</span><div class="prog-track"><div class="prog-fill" style="width:${w}%;background:${color}"></div></div><span class="pn" style="color:${color};font-weight:600">${p.done}/${p.total} (${w}%)</span></div>`;}).join('');}
 
@@ -1054,7 +1054,7 @@ function renderOverviewRight(selectedProj){
 function renderSavedProgress(){const role=(AUTH.user&&AUTH.user.role)||'';const box=$('#savedProgress');if(!box)return;const show=(role==='leader'||role==='manager'||role==='admin')&&progressCache.length;box.style.display=show?'':'none';if(!show)return;const sel_f=$('#savedProgFilter');const multi=(role==='manager'||role==='admin');sel_f.style.display=multi?'':'none';if(multi){const cur=sel_f.value;sel_f.innerHTML=['<option value="__all">All Projects</option>'].concat(progressCache.map(p=>`<option value="${esc(p.project)}">${esc(p.project)}</option>`)).join('');if(cur&&[...sel_f.options].some(o=>o.value===cur))sel_f.value=cur;sel_f.onchange=()=>renderSavedProgress();}const pick=multi?sel_f.value:'__all';const list=(pick==='__all')?progressCache:progressCache.filter(p=>p.project===pick);const tot=list.reduce((a,p)=>a+p.total,0),done=list.reduce((a,p)=>a+p.done,0),remain=Math.max(0,tot-done),pct=tot?Math.round(done/tot*100):0;let html=`<div class="prog-cards"><div class="prog-c"><div class="v">${tot}</div><div>Total</div></div><div class="prog-c"><div class="v" style="color:var(--ok)">${done}</div><div>Done</div></div><div class="prog-c"><div class="v" style="color:var(--danger)">${remain}</div><div>Remaining</div></div><div class="prog-c"><div class="v" style="color:var(--accent)">${pct}%</div><div>Progress</div></div></div>`;html+=list.map(p=>{const w=p.total?Math.round(p.done/p.total*100):0;return `<div class="prog-row"><span class="pl">${esc(p.project)}</span><div class="prog-track"><div class="prog-fill" style="width:${w}%"></div></div><span class="pn">${p.done}/${p.total} (${w}%)</span></div>`;}).join('');$('#savedProgBody').innerHTML=html;}
 
 /* ─── LEADER DONUT ──────────────────────────────────────── */
-const DONUT_COLORS=['#EE7C16','#3B82F6','#10B981','#8B5CF6','#EC4899','#F59E0B','#14B8A6','#6366F1','#EF4444','#84CC16'];
+const DONUT_COLORS=['#D93A2B','#3B82F6','#10B981','#8B5CF6','#EC4899','#F59E0B','#14B8A6','#6366F1','#EF4444','#84CC16'];
 let targetsCache=[];
 async function loadTargets(){if(!AUTH.token)return;const role=(AUTH.user&&AUTH.user.role)||'';if(!['admin','manager','leader'].includes(role))return;const r=await api('listTargets',{});if(r&&r.ok){targetsCache=r.targets||[];renderGanttChart();}}
 function getTargetForProject(proj){const username=AUTH.user?.username||'',role=AUTH.user?.role||'';return targetsCache.find(t=>t.project===proj&&(role!=='leader'||t.username===username));}
