@@ -510,6 +510,9 @@ function fillSavedFilters(){
 }
 
 // แยกตรรกะ filter/sort ของหน้ารายการออกมา ให้ปุ่ม "Generate PDF Report" เรียกใช้รายการชุดเดียวกับที่เห็นบนตารางได้
+let recordsDateFilter=null; // 'YYYY-M-D' set by clicking a bar on the Daily Uploads chart, or null
+let recordsStatusFilter=null; // 'confirmed' | 'pending', set by clicking the Status Breakdown donut, or null
+function dateKeyOf(ts){const d=new Date(ts);return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;}
 function getSavedFilteredList(){
   const q=$('#savedSearch')?$('#savedSearch').value.trim().toLowerCase():'';
   const fp=$('#savedFProject')?$('#savedFProject').value:'';
@@ -526,6 +529,9 @@ function getSavedFilteredList(){
   if(fsub)list=list.filter(e=>e.subName===fsub);
   if(feq)list=list.filter(e=>e.equipment===feq);
   if(pendingOnly)list=list.filter(e=>e.pendingReview);
+  if(recordsDateFilter)list=list.filter(e=>dateKeyOf(e.createdAt)===recordsDateFilter);
+  if(recordsStatusFilter==='pending')list=list.filter(e=>e.pendingReview);
+  else if(recordsStatusFilter==='confirmed')list=list.filter(e=>!e.pendingReview);
   if(sortVal==='newest')list.sort((a,b)=>b.createdAt-a.createdAt);
   else if(sortVal==='oldest')list.sort((a,b)=>a.createdAt-b.createdAt);
   else if(sortVal==='az')list.sort((a,b)=>(a.equipment||'').localeCompare(b.equipment||''));
@@ -553,9 +559,33 @@ function ensurePendingFilterUI(){
   toolbar.appendChild(wrap);
   $('#savedFPending').addEventListener('change',renderSaved);
 }
+// ชิป "Filtered by ..." โผล่เฉพาะตอนมี filter จากการกดกราฟ (วันที่/สถานะ) — ไม่ใช่ dropdown ปกติ
+function ensureChartFilterChip(){
+  if($('#chartFilterChip'))return;
+  const toolbar=$('#savedSort')&&$('#savedSort').closest('.flt-toolbar');
+  if(!toolbar)return;
+  const chip=document.createElement('span');
+  chip.id='chartFilterChip';
+  chip.style.cssText='display:none;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--accent-deep);background:var(--accent-wash);border-radius:20px;padding:6px 12px;white-space:nowrap;cursor:pointer';
+  toolbar.appendChild(chip);
+  chip.addEventListener('click',()=>{recordsDateFilter=null;recordsStatusFilter=null;renderSaved();});
+}
+function updateChartFilterChip(){
+  const chip=$('#chartFilterChip');if(!chip)return;
+  if(recordsDateFilter){
+    const [y,m,d]=recordsDateFilter.split('-');
+    chip.style.display='flex';chip.innerHTML=`Filtered by date: ${d}/${m}/${y} &times;`;
+  }else if(recordsStatusFilter){
+    chip.style.display='flex';chip.innerHTML=`Filtered by status: ${recordsStatusFilter==='pending'?'Pending Review':'Confirmed'} &times;`;
+  }else{
+    chip.style.display='none';
+  }
+}
 function renderSaved(){
   fillSavedFilters();
   ensurePendingFilterUI();
+  ensureChartFilterChip();
+  updateChartFilterChip();
   const list=getSavedFilteredList();
   $('#savedPill').textContent=entries.length;
   const pendingCount=entries.filter(e=>e.pendingReview).length;
@@ -791,11 +821,49 @@ let progressCache=[];
 async function loadProgress(){if(!AUTH.token)return;const r=await api(ACT.getProgress,{});if(r&&r.ok&&Array.isArray(r.progress)){progressCache=r.progress;renderSavedProgress();renderOverviewDash();renderLeaderDashboard();}}
 document.addEventListener('DOMContentLoaded',()=>{const df=$('#dashMainFilter');if(df)df.addEventListener('change',renderDashboard);});
 
-function renderDashboard(){if(!canSeeDashboard())return;const role=(AUTH.user&&AUTH.user.role)||'';const leaderProjs=(role==='leader')?(AUTH.user?.project||'').split(',').map(p=>p.trim()).filter(Boolean):[];const baseEntries=(role==='leader'&&leaderProjs.length>0)?entries.filter(e=>leaderProjs.includes(e.project)):entries;let withImg=0,days={};baseEntries.forEach(e=>{if(e.imgMain||e.imgSticker)withImg++;const d=new Date(e.createdAt);const key=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;days[key]=(days[key]||0)+1;});const total=baseEntries.length;const projCount=uniq(baseEntries.map(e=>e.project)).filter(Boolean).length;const td=new Date();const tkey=`${td.getFullYear()}-${pad(td.getMonth()+1)}-${pad(td.getDate())}`;const todayN=days[tkey]||0;$('#kpiRow').innerHTML='';const allProjs=uniq(baseEntries.map(e=>e.project)).filter(Boolean).sort();const df=$('#dashMainFilter');if(df){const cur=df.value;df.innerHTML='<option value="__all">All Projects</option>'+allProjs.map(p=>`<option value="${escAttr(p)}">${esc(p)}</option>`).join('');df.value=cur;}renderOverviewDash();renderLeaderDashboard();}
+function renderDashboard(){if(!canSeeDashboard())return;const role=(AUTH.user&&AUTH.user.role)||'';const leaderProjs=(role==='leader')?(AUTH.user?.project||'').split(',').map(p=>p.trim()).filter(Boolean):[];const baseEntries=(role==='leader'&&leaderProjs.length>0)?entries.filter(e=>leaderProjs.includes(e.project)):entries;let withImg=0,days={};baseEntries.forEach(e=>{if(e.imgMain||e.imgSticker)withImg++;const d=new Date(e.createdAt);const key=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;days[key]=(days[key]||0)+1;});const total=baseEntries.length;const projCount=uniq(baseEntries.map(e=>e.project)).filter(Boolean).length;const td=new Date();const tkey=`${td.getFullYear()}-${pad(td.getMonth()+1)}-${pad(td.getDate())}`;const todayN=days[tkey]||0;$('#kpiRow').innerHTML='';const allProjs=uniq(baseEntries.map(e=>e.project)).filter(Boolean).sort();const df=$('#dashMainFilter');if(df){const cur=df.value;df.innerHTML='<option value="__all">All Projects</option>'+allProjs.map(p=>`<option value="${escAttr(p)}">${esc(p)}</option>`).join('');df.value=cur;}renderOverviewDash();renderLeaderDashboard();renderStatusDonut(baseEntries);renderDailyChart(baseEntries);}
+let statusDonutInst=null;
+function renderStatusDonut(list){
+  const canvas=$('#statusDonutCanvas');if(!canvas||typeof Chart==='undefined')return;
+  const pending=list.filter(e=>e.pendingReview).length,confirmed=list.length-pending;
+  if(statusDonutInst)statusDonutInst.destroy();
+  statusDonutInst=new Chart(canvas,{
+    type:'doughnut',
+    data:{labels:['Confirmed','Pending Review'],datasets:[{data:[confirmed,pending],backgroundColor:['#2E9E6B','#F97316'],borderWidth:0}]},
+    options:{
+      cutout:'62%',responsive:true,maintainAspectRatio:false,
+      onClick:(evt,els)=>{if(els.length)filterRecordsByStatus(els[0].index===0?'confirmed':'pending');},
+      onHover:(evt,els)=>{evt.native.target.style.cursor=els.length?'pointer':'default';},
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}}
+    }
+  });
+  const legend=$('#statusDonutLegend');if(legend)legend.textContent=`${confirmed} confirmed · ${pending} pending`;
+}
 
 function renderProgress(){const df=$('#dashMainFilter');const pick=df?df.value:'__all';const list=(!pick||pick==='__all')?progressCache:progressCache.filter(p=>p.project===pick);const tot=list.reduce((a,p)=>a+p.total,0),done=list.reduce((a,p)=>a+p.done,0),remain=Math.max(0,tot-done),pct=tot?Math.round(done/tot*100):0;$('#progSummary').innerHTML=`<div class="prog-cards"><div class="prog-c"><div class="v">${tot}</div><div>Total</div></div><div class="prog-c"><div class="v" style="color:var(--ok)">${done}</div><div>Done</div></div><div class="prog-c"><div class="v" style="color:var(--danger)">${remain}</div><div>Remaining</div></div><div class="prog-c"><div class="v" style="color:var(--accent)">${pct}%</div><div>Progress</div></div></div>`;const pctEl=$('#progTotalPct');if(pctEl)pctEl.textContent=tot?pct+'%':'—';const chart=$('#progChart');if(!list.length){chart.innerHTML='';return;}chart.innerHTML=list.map(p=>{const w=p.total?Math.round(p.done/p.total*100):0;const color=w>=80?'#22C55E':w>=40?'#F97316':'#EF4444';return `<div class="prog-row"><span class="pl">${esc(p.project)}</span><div class="prog-track"><div class="prog-fill" style="width:${w}%;background:${color}"></div></div><span class="pn" style="color:${color};font-weight:600">${p.done}/${p.total} (${w}%)</span></div>`;}).join('');}
 
-function renderDailyChart(filtered){const chartEl=$('#chartDaily');if(!chartEl)return;const N=14,today=new Date();today.setHours(0,0,0,0);const dateKeys=[];for(let i=N-1;i>=0;i--){const d=new Date(today);d.setDate(d.getDate()-i);dateKeys.push({key:`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`,lbl:`${d.getDate()}/${d.getMonth()+1}`});}const days={};(filtered||entries).forEach(e=>{const d=new Date(e.createdAt);const key=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;days[key]=(days[key]||0)+1;});const vals=dateKeys.map(dk=>days[dk.key]||0);const max=Math.max(1,...vals);const W=700,H=200,pl=32,pb=26,pt=12,pr=12;let bars='',xl='',gl='';const cw=(W-pl-pr)/N,bw=cw*.62;vals.forEach((v,i)=>{const x=pl+i*cw+(cw-bw)/2;const h=(H-pb-pt)*(v/max);const y=H-pb-h;bars+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(h,0).toFixed(1)}" fill="var(--accent)" rx="2" opacity="${v?1:.08}"><title>${dateKeys[i].lbl}: ${v}</title></rect>`;if(v>0)bars+=`<text x="${(x+bw/2).toFixed(1)}" y="${(y-3).toFixed(1)}" text-anchor="middle" style="font-size:10px;fill:var(--accent);font-weight:600">${v}</text>`;if(i%2===0||i===N-1)xl+=`<text x="${(x+bw/2).toFixed(1)}" y="${H-pb+14}" text-anchor="middle" style="font-size:9px;fill:var(--ink-faint)">${dateKeys[i].lbl}</text>`;});const steps=Math.min(max,4);for(let s=0;s<=steps;s++){const yv=Math.round(max*s/steps);const yy=H-pb-(H-pb-pt)*s/steps;gl+=`<line x1="${pl}" y1="${yy.toFixed(1)}" x2="${W-pr}" y2="${yy.toFixed(1)}" stroke="var(--line)" stroke-width="${s?0.5:1}"/><text x="${pl-5}" y="${(yy+3).toFixed(1)}" text-anchor="end" style="font-size:9px;fill:var(--ink-faint)">${yv}</text>`;}chartEl.innerHTML=`<svg class="bar-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${gl}${bars}${xl}<line stroke="var(--ink-faint)" x1="${pl}" y1="${H-pb}" x2="${W-pr}" y2="${H-pb}"/></svg>`;}
+function filterRecordsByDate(dateKey){recordsDateFilter=dateKey;recordsStatusFilter=null;goTab('saved');renderSaved();}
+function filterRecordsByStatus(status){recordsStatusFilter=status;recordsDateFilter=null;goTab('saved');renderSaved();}
+let dailyChartInst=null;
+function renderDailyChart(filtered){
+  const canvas=$('#chartDailyCanvas');if(!canvas||typeof Chart==='undefined')return;
+  const N=14,today=new Date();today.setHours(0,0,0,0);
+  const dateKeys=[];for(let i=N-1;i>=0;i--){const d=new Date(today);d.setDate(d.getDate()-i);dateKeys.push({key:`${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`,lbl:`${d.getDate()}/${d.getMonth()+1}`});}
+  const days={};(filtered||entries).forEach(e=>{days[dateKeyOf(e.createdAt)]=(days[dateKeyOf(e.createdAt)]||0)+1;});
+  const vals=dateKeys.map(dk=>days[dk.key]||0);
+  if(dailyChartInst)dailyChartInst.destroy();
+  dailyChartInst=new Chart(canvas,{
+    type:'bar',
+    data:{labels:dateKeys.map(dk=>dk.lbl),datasets:[{data:vals,backgroundColor:'#EE7C16',borderRadius:4,maxBarThickness:36}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      onClick:(evt,els)=>{if(els.length)filterRecordsByDate(dateKeys[els[0].index].key);},
+      onHover:(evt,els)=>{evt.native.target.style.cursor=els.length?'pointer':'default';},
+      scales:{y:{beginAtZero:true,ticks:{precision:0}},x:{grid:{display:false}}},
+      plugins:{legend:{display:false},tooltip:{callbacks:{title:items=>dateKeys[items[0].dataIndex].lbl}}}
+    }
+  });
+}
 
 function renderOverviewDash(){
   const card=$('#overviewDashCard');if(!card)return;
@@ -1026,7 +1094,34 @@ function renderDashAssign(){
 }
 
 function deadlineLabel(deadline){if(!deadline)return '<span style="color:var(--ink-faint)">Not set</span>';const d=new Date(deadline),now=new Date();now.setHours(0,0,0,0);const diff=Math.ceil((d-now)/(1000*60*60*24));const fmt=`${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()+543}`;if(diff<0)return `<span class="deadline-over">${Math.abs(diff)} days overdue (${fmt})</span>`;if(diff<=7)return `<span class="deadline-warn">${diff} days left (${fmt})</span>`;return `<span class="deadline-ok">${fmt} (${diff} days left)</span>`;}
-function renderLeaderDashboard(){const role=(AUTH.user&&AUTH.user.role)||'';const sec=$('#leaderDashSection');if(!sec)return;if(role!=='leader'){sec.style.display='none';return;}if(!progressCache.length){sec.style.display='none';return;}sec.style.display='';const list=progressCache;const totalAll=list.reduce((a,p)=>a+p.total,0);const doneAll=list.reduce((a,p)=>a+p.done,0);const pctAll=totalAll?Math.round(doneAll/totalAll*100):0;if($('#leaderDonutPct'))$('#leaderDonutPct').textContent=pctAll+'%';const svg=$('#leaderDonutSvg');const cx=100,cy=100,R=80,r=52;let startAngle=-Math.PI/2,paths='';list.forEach((p,i)=>{const frac=totalAll?p.total/totalAll:1/list.length;const angle=frac*2*Math.PI;const endAngle=startAngle+angle;const x1=cx+R*Math.cos(startAngle),y1=cy+R*Math.sin(startAngle);const x2=cx+R*Math.cos(endAngle),y2=cy+R*Math.sin(endAngle);const ix1=cx+r*Math.cos(startAngle),iy1=cy+r*Math.sin(startAngle);const ix2=cx+r*Math.cos(endAngle),iy2=cy+r*Math.sin(endAngle);const large=angle>Math.PI?1:0;const color=DONUT_COLORS[i%DONUT_COLORS.length];const pct=p.total?Math.round(p.done/p.total*100):0;paths+=`<path class="donut-seg" d="M${x1.toFixed(2)},${y1.toFixed(2)} A${R},${R} 0 ${large},1 ${x2.toFixed(2)},${y2.toFixed(2)} L${ix2.toFixed(2)},${iy2.toFixed(2)} A${r},${r} 0 ${large},0 ${ix1.toFixed(2)},${iy1.toFixed(2)} Z" fill="${color}" data-proj="${escAttr(p.project)}"><title>${esc(p.project)}: ${p.done}/${p.total} (${pct}%)</title></path>`;startAngle=endAngle;});svg.innerHTML=paths;svg.querySelectorAll('.donut-seg').forEach(seg=>seg.addEventListener('click',()=>openProjDetail(seg.dataset.proj)));$('#leaderDonutList').innerHTML=list.map((p,i)=>{const pct=p.total?Math.round(p.done/p.total*100):0;const color=DONUT_COLORS[i%DONUT_COLORS.length];const t=getTargetForProject(p.project);return `<div class="proj-item" onclick="openProjDetail('${escAttr(p.project)}')"><div class="proj-dot" style="background:${color}"></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">${esc(p.project)}</div><div class="proj-bar-track" style="margin:4px 0"><div class="proj-bar-fill" style="width:${pct}%;background:${color}"></div></div><div style="font-size:11px">${p.done}/${p.total} (${pct}%)</div><div style="font-size:11px;margin-top:2px">${t?deadlineLabel(t.deadline):'<span style="color:var(--ink-faint)">Target not set</span>'}</div></div></div>`;}).join('');if($('#leaderDonutLegend'))$('#leaderDonutLegend').textContent=`${list.length} projects · ${doneAll}/${totalAll} records`;}
+let leaderDonutInst=null;
+function renderLeaderDashboard(){
+  const role=(AUTH.user&&AUTH.user.role)||'';const sec=$('#leaderDashSection');if(!sec)return;
+  if(role!=='leader'){sec.style.display='none';return;}
+  if(!progressCache.length){sec.style.display='none';return;}
+  sec.style.display='';
+  const list=progressCache;
+  const totalAll=list.reduce((a,p)=>a+p.total,0),doneAll=list.reduce((a,p)=>a+p.done,0);
+  const pctAll=totalAll?Math.round(doneAll/totalAll*100):0;
+  if($('#leaderDonutPct'))$('#leaderDonutPct').textContent=pctAll+'%';
+  const canvas=$('#leaderDonutCanvas');
+  if(canvas&&typeof Chart!=='undefined'){
+    const colors=list.map((p,i)=>DONUT_COLORS[i%DONUT_COLORS.length]);
+    if(leaderDonutInst)leaderDonutInst.destroy();
+    leaderDonutInst=new Chart(canvas,{
+      type:'doughnut',
+      data:{labels:list.map(p=>p.project),datasets:[{data:list.map(p=>p.total),backgroundColor:colors,borderWidth:0}]},
+      options:{
+        cutout:'62%',responsive:true,maintainAspectRatio:false,
+        onClick:(evt,els)=>{if(els.length)openProjDetail(list[els[0].index].project);},
+        onHover:(evt,els)=>{evt.native.target.style.cursor=els.length?'pointer':'default';},
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const p=list[ctx.dataIndex];const pct=p.total?Math.round(p.done/p.total*100):0;return `${p.project}: ${p.done}/${p.total} (${pct}%)`;}}}}
+      }
+    });
+  }
+  $('#leaderDonutList').innerHTML=list.map((p,i)=>{const pct=p.total?Math.round(p.done/p.total*100):0;const color=DONUT_COLORS[i%DONUT_COLORS.length];const t=getTargetForProject(p.project);return `<div class="proj-item" onclick="openProjDetail('${escAttr(p.project)}')"><div class="proj-dot" style="background:${color}"></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">${esc(p.project)}</div><div class="proj-bar-track" style="margin:4px 0"><div class="proj-bar-fill" style="width:${pct}%;background:${color}"></div></div><div style="font-size:11px">${p.done}/${p.total} (${pct}%)</div><div style="font-size:11px;margin-top:2px">${t?deadlineLabel(t.deadline):'<span style="color:var(--ink-faint)">Target not set</span>'}</div></div></div>`;}).join('');
+  if($('#leaderDonutLegend'))$('#leaderDonutLegend').textContent=`${list.length} projects · ${doneAll}/${totalAll} records`;
+}
 
 function openProjDetail(proj){const p=progressCache.find(x=>x.project===proj);if(!p)return;const i=progressCache.indexOf(p);const color=DONUT_COLORS[i%DONUT_COLORS.length];const pct=p.total?Math.round(p.done/p.total*100):0;const remain=Math.max(0,p.total-p.done);const t=getTargetForProject(proj);const statusColor=pct>=80?'#22C55E':pct>=40?'#F97316':'#EF4444';$('#projDetailContent').innerHTML=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px"><div style="width:14px;height:14px;border-radius:50%;background:${color};flex:none"></div><h3>${esc(proj)}</h3></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px"><div style="background:#F7F9FB;border-radius:10px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:700">${p.total}</div><div style="font-size:11px;color:var(--ink-soft)">Total Work</div></div><div style="background:#F7F9FB;border-radius:10px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:700;color:#22C55E">${p.done}</div><div style="font-size:11px;color:var(--ink-soft)">Done</div></div><div style="background:#F7F9FB;border-radius:10px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:700;color:#EF4444">${remain}</div><div style="font-size:11px;color:var(--ink-soft)">Remaining</div></div></div><div style="background:#F7F9FB;border-radius:10px;padding:14px;margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:13px;font-weight:600">Progress</span><span style="font-weight:700;color:${statusColor}">${pct}%</span></div><div style="background:var(--line-soft);border-radius:6px;height:14px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${statusColor};border-radius:6px;transition:width .5s"></div></div></div><div class="target-form"><div style="font-size:13px;font-weight:600;margin-bottom:10px">${t?'Edit':'Set'} Target Due Date</div><label style="font-size:12px;font-weight:500;display:block;margin-bottom:4px">Due Date</label><input type="date" class="tin" id="targetDate" style="width:100%;margin-bottom:10px" value="${t?t.deadline.split('T')[0]:''}"><label style="font-size:12px;font-weight:500;display:block;margin-bottom:4px">Note</label><input type="text" class="tin" id="targetNote" style="width:100%;margin-bottom:12px" placeholder="e.g. per contract..." value="${t?esc(t.note||''):''}"><button class="btn btn-primary" style="width:100%" onclick="saveTargetForProj('${escAttr(proj)}')">Save Target</button><div id="targetSaveMsg" style="margin-top:8px;font-size:12px;text-align:center"></div></div>`;$('#projDetailModal').style.display='flex';}
 async function saveTargetForProj(proj){const deadline=$('#targetDate').value,note=$('#targetNote').value.trim(),msg=$('#targetSaveMsg');if(!deadline){msg.innerHTML='<span style="color:#EF4444">Please select a date</span>';return;}msg.innerHTML='<span style="color:var(--ink-soft)">Saving...</span>';const r=await api('saveTarget',{project:proj,deadline,note});if(r&&r.ok){msg.innerHTML='<span style="color:#22C55E">Saved</span>';await loadTargets();renderLeaderDashboard();setTimeout(()=>{$('#projDetailModal').style.display='none';},800);}else msg.innerHTML=`<span style="color:#EF4444">❌ ${esc((r&&r.message)||'An error occurred')}</span>`;}

@@ -6,12 +6,13 @@
 <title>Project Equipment Report — AMR Asia</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -26,7 +27,7 @@
       </div>
       <div class="info">
         <h2>Sign In</h2>
-        <div class="sub">AMR Inspection · OMD</div>
+        <div class="sub">AMR Inspection · OMA</div>
       </div>
     </div>
     <label for="authUser">Username</label>
@@ -60,7 +61,7 @@
 <header class="app">
   <div class="brandmark" id="headerBrandmark">
     <!-- Logo injected by JS -->
-    <span style="font-family:'IBM Plex Mono';font-size:13px;font-weight:700;color:var(--accent-deep)" id="headerLogoFallback">AMR ASIA</span>
+    <span style="font-size:13px;font-weight:700;color:var(--accent-deep)" id="headerLogoFallback">AMR ASIA</span>
   </div>
   <div class="brand-text">
     <h1>Project Equipment Report</h1>
@@ -90,16 +91,15 @@
 <section class="panel active" id="panel-dash">
   <div class="eyebrow">Overview</div>
   <div class="panel-title">Project Equipment Overview</div>
-  <div class="panel-desc">Summary of recorded items by project, and daily upload trends</div>
 
   <div id="leaderDashSection" style="display:none;margin-bottom:18px">
     <div class="dash-card">
       <div class="dc-head"><b>My Projects Overview</b><span id="leaderDonutLegend" style="font-size:12px;color:var(--ink-soft)"></span></div>
       <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
-        <div style="position:relative;flex:none">
-          <svg id="leaderDonutSvg" width="200" height="200" viewBox="0 0 200 200" style="cursor:pointer"></svg>
+        <div style="position:relative;flex:none;width:200px;height:200px">
+          <canvas id="leaderDonutCanvas" width="200" height="200" style="cursor:pointer"></canvas>
           <div id="leaderDonutCenter" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none">
-            <div style="font-size:28px;font-weight:700;font-family:'IBM Plex Mono';color:var(--accent)" id="leaderDonutPct">0%</div>
+            <div style="font-size:28px;font-weight:700;color:var(--accent)" id="leaderDonutPct">0%</div>
             <div style="font-size:11px;color:var(--ink-soft)">Total</div>
           </div>
         </div>
@@ -126,8 +126,17 @@
     <div id="progChart" style="margin-top:14px"></div>
   </div>
   <div class="dash-card" style="margin-bottom:14px">
-    <div class="dc-head"><b>Daily Uploads</b><span id="dayRangeLbl" style="font-size:12px;color:var(--ink-soft)">Last 14 days</span></div>
-    <div id="chartDaily"></div>
+    <div class="dc-head"><b>Daily Uploads</b><span id="dayRangeLbl" style="font-size:12px;color:var(--ink-soft)">Last 14 days · click a bar to filter Records by that day</span></div>
+    <div id="chartDaily"><canvas id="chartDailyCanvas" height="200"></canvas></div>
+  </div>
+  <div class="dash-card" style="margin-bottom:14px">
+    <div class="dc-head"><b>Status Breakdown</b><span id="statusDonutLegend" style="font-size:12px;color:var(--ink-soft)"></span></div>
+    <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+      <div style="position:relative;flex:none;width:160px;height:160px">
+        <canvas id="statusDonutCanvas" width="160" height="160" style="cursor:pointer"></canvas>
+      </div>
+      <div style="font-size:12px;color:var(--ink-soft)">Click a slice to filter Records by that status</div>
+    </div>
   </div>
   <div class="dash-card" id="assignDashCard" style="display:none;margin-bottom:14px">
     <div class="dc-head">
@@ -326,7 +335,6 @@
   <div class="admin-only" style="margin-bottom:22px">
     <div class="eyebrow">Page Permissions</div>
     <div class="panel-title" style="font-size:16px">Set Access Permissions per Role</div>
-    <div class="panel-desc">Choose which pages each role can see, or whether they can use the "Generate PDF Report"/"Delete" buttons</div>
     <div id="pagePermContainer" style="background:var(--surface);border:1px solid var(--line-soft);border-radius:14px;padding:16px;box-shadow:var(--shadow)"></div>
   </div>
   <div class="eyebrow">User Management</div>
