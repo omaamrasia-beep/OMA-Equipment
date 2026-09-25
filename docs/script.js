@@ -827,7 +827,7 @@ $('#kpiRow').innerHTML=[
   {lbl:'Projects',n:projCount,color:'#2563EB'},
   {lbl:'Today',n:todayN,color:'#16A34A'},
   {lbl:'With Photos',n:withImg,color:'#D97706'},
-].map(k=>`<div class="kpi" style="border-left:4px solid ${k.color}"><div style="font-size:12px;color:var(--ink-soft)">${k.lbl}</div><div class="k-num" style="color:${k.color}">${k.n}</div></div>`).join('');
+].map(k=>`<div class="kpi" style="border-left:4px solid ${k.color}"><div class="k-lbl">${k.lbl}</div><div class="k-num" style="color:${k.color}">${k.n}</div></div>`).join('');
 const allProjs=uniq(baseEntries.map(e=>e.project)).filter(Boolean).sort();const df=$('#dashMainFilter');if(df){const cur=df.value;df.innerHTML='<option value="__all">All Projects</option>'+allProjs.map(p=>`<option value="${escAttr(p)}">${esc(p)}</option>`).join('');df.value=cur;}renderOverviewDash();renderLeaderDashboard();renderStatusDonut(baseEntries);renderDailyChart(baseEntries);const baseMaster=(role==='leader'&&leaderProjs.length>0)?master.filter(m=>leaderProjs.includes(m.project)):master;fillDashEquipLocFilter(baseMaster);renderDashEquipTable(baseMaster);renderGanttChart();}
 let ganttChartInst=null;
 function fmtGanttDate(ts){const d=new Date(ts);return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;}

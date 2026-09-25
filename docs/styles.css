@@ -179,6 +179,7 @@ td.codecell{font-size:11.5px;color:var(--accent-deep)}
 /* ─── KPI / DASH ─────────────────────────────────────────  */
 .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
 .kpi{background:var(--surface);border:1px solid var(--line-soft);border-radius:13px;padding:16px 18px;box-shadow:var(--shadow)}
+.kpi .k-lbl{font-size:12px;color:var(--ink-soft)}
 .kpi .k-num{font-size:28px;font-weight:700;margin-top:4px;line-height:1.1}
 .kpi.accent{border-left:3px solid var(--accent)}
 .dash-card{background:var(--surface);border:1px solid var(--line-soft);border-radius:13px;padding:16px 18px;box-shadow:var(--shadow)}
@@ -515,7 +516,8 @@ body.dark .assign-badge-done{background:#022C22;color:#34D399}
 
 /* ─── RESPONSIVE ─────────────────────────────────────────── */
 @media(max-width:760px){
-  .cascade,.bm-row,.imgs,.io-cols,.wg-row,.kpi-row,.prog-cards,.user-cols{grid-template-columns:1fr}
+  .cascade,.bm-row,.imgs,.io-cols,.wg-row,.prog-cards,.user-cols{grid-template-columns:1fr}
+  .kpi-row{grid-template-columns:repeat(4,1fr)}
   .header-stat{display:none}
 }
 @media(max-width:600px){
@@ -543,17 +545,34 @@ body.dark .assign-badge-done{background:#022C22;color:#34D399}
   /* assign card */
   .assign-card{flex-wrap:wrap}
   #assignModal>div{margin-top:10px}
-  /* ปุ่มไอคอน (แก้ไข/ลบ) เล็กเกินไปสำหรับนิ้วบนมือถือ ขยายพื้นที่แตะให้ถึงขั้นต่ำที่แนะนำ (~40px) */
-  .icon-btn{width:38px;height:38px}
-  .rowact{gap:8px}
+  .icon-btn{width:32px;height:32px}
+  .rowact{gap:6px}
+  .dc-head{flex-wrap:wrap;row-gap:8px}
+  .dc-head select{width:100% !important;min-width:0 !important}
+  /* หัวเว็บ/โลโก้/ตัวอักษร ย่อลงให้พอดีจอมือถือ ไม่ดันปุ่มขวาให้ตกบรรทัด */
+  header.app{padding:10px 14px;gap:10px;min-height:auto}
+  .brandmark{height:34px;min-width:0;padding:1px 6px}
+  .brand-text h1{font-size:14px}
+  .brand-text .sub{font-size:8.5px;letter-spacing:1px}
+  .user-chip{gap:6px}
+  /* กล่องสรุปด้านบน Dashboard ย่อให้อยู่แถวเดียวเหมือนจอคอม */
+  .kpi-row{gap:6px;margin-bottom:14px}
+  .kpi{padding:8px 6px;border-radius:9px;border-left-width:3px !important}
+  .kpi .k-lbl{font-size:9px;line-height:1.2}
+  .kpi .k-num{font-size:16px;margin-top:2px}
+  /* ปุ่ม/ช่อง filter (รายการที่บันทึก/จัดการข้อมูลหลัก) ย่อให้พอดี ไม่ใหญ่รก */
+  .flt-toolbar .btn,.flt-toolbar .ghost-btn,.flt-toolbar .btn-soft{padding:7px 12px;font-size:12px}
+  .flt-drawer-toggle{padding:7px 10px;font-size:12px}
   /* ตาราง จัดการข้อมูลหลัก/จัดการผู้ใช้ — คอลัมน์เยอะเกินจะอ่านสะดวกบนมือถือ พับเป็นการ์ดแทน
      (แต่ละแถวกลายเป็นการ์ด แต่ละเซลล์ขึ้นชื่อคอลัมน์กำกับด้วย data-label ผ่าน ::before) */
-  .table-wrap table,.table-wrap thead,.table-wrap tbody,.table-wrap tr,.table-wrap th,.table-wrap td{display:block}
+  .table-wrap table,.table-wrap thead,.table-wrap tbody,.table-wrap tr,.table-wrap th{display:block}
+  .table-wrap table{width:100% !important;min-width:0 !important}
   .table-wrap thead{position:absolute;left:-9999px;top:-9999px}
   .table-wrap tr{border:1px solid var(--line-soft);border-radius:12px;padding:10px 12px;margin-bottom:10px;background:var(--surface)}
-  .table-wrap td{border:none !important;padding:7px 0 !important;text-align:right !important;min-height:20px}
-  .table-wrap td[data-label]:not([data-label=""])::before{content:attr(data-label);float:left;font-weight:600;color:var(--ink-soft);font-size:12px}
-  .table-wrap td[data-label=""]{text-align:left !important}
+  /* flex แทน float+text-align เดิม — กันข้อความยาว (เช่นชื่อโครงการภาษาไทย) ดันล้นออกนอกจอ */
+  .table-wrap td{display:flex !important;justify-content:space-between;align-items:flex-start;gap:10px;border:none !important;padding:7px 0 !important;min-height:20px;text-align:right;word-break:break-word}
+  .table-wrap td[data-label]:not([data-label=""])::before{content:attr(data-label);flex:none;font-weight:600;color:var(--ink-soft);font-size:12px;text-align:left}
+  .table-wrap td[data-label=""]{justify-content:flex-end;text-align:left}
   .table-wrap td .rowact{justify-content:flex-end}
 }
 
