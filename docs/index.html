@@ -14,6 +14,14 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <link rel="stylesheet" href="styles.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#D93A2B">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Equipment Report">
 </head>
 <body>
 
@@ -89,7 +97,6 @@
 
 <!-- ══════ PANEL: DASHBOARD ══════ -->
 <section class="panel active" id="panel-dash">
-  <div class="eyebrow">Overview</div>
   <div class="panel-title">Project Equipment Overview</div>
 
   <div id="leaderDashSection" style="display:none;margin-bottom:18px">
@@ -165,7 +172,6 @@
 
 <!-- ══════ PANEL: ADD ══════ -->
 <section class="panel" id="panel-add">
-  <div class="eyebrow" id="addEyebrow">New Record</div>
   <div class="panel-title" id="addTitle">Add New Record</div>
   <button class="btn btn-soft qr-only" id="openQrScanBtn" style="width:100%;margin-bottom:16px;justify-content:center">Scan QR/Barcode to Open Form</button>
   <div class="card">
@@ -346,11 +352,9 @@
 <!-- ══════ PANEL: USERS ══════ -->
 <section class="panel" id="panel-users">
   <div class="admin-only" style="margin-bottom:22px">
-    <div class="eyebrow">Page Permissions</div>
-    <div class="panel-title" style="font-size:16px">Set Access Permissions per Role</div>
+    <div class="panel-title" style="font-size:16px">Page Permissions</div>
     <div id="pagePermContainer" style="background:var(--surface);border:1px solid var(--line-soft);border-radius:14px;padding:16px;box-shadow:var(--shadow)"></div>
   </div>
-  <div class="eyebrow">User Management</div>
   <div class="panel-title">Manage Users</div>
   <div class="user-cols">
     <div class="card"><div class="card-b">
@@ -562,5 +566,10 @@
 </div>
 
 <script src="script.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+</script>
 </body>
 </html>

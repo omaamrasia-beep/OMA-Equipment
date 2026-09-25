@@ -58,7 +58,6 @@ main{max-width:1400px;margin:0 auto;padding:24px 22px 80px}
 .panel{display:none;animation:fade .25s ease}
 .panel.active{display:block}
 @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-.eyebrow{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--accent-deep);margin-bottom:6px}
 .panel-title{font-size:22px;font-weight:600;margin-bottom:2px}
 
 /* ─── CARDS ─────────────────────────────────────────────── */
@@ -448,7 +447,6 @@ body.readonly .ro-banner{display:block}
 :root[data-theme="dark"] .icon-btn{background:#24232b;color:#b6b0c4;border-color:#38363f}
 :root[data-theme="dark"] .sdlg-panel{background:#24232b}
 :root[data-theme="dark"] .flt-toolbar input{background:#24232b !important}
-:root[data-theme="dark"] .eyebrow{color:#c285ff}
 :root[data-theme="dark"] .import-drop{background:#24232b;border-color:#38363f;color:#7c7690}
 :root[data-theme="dark"] .ic-grid span{background:#1c1b22;border-color:#38363f;color:#7c7690}
 :root[data-theme="dark"] .assign-card{background:#24232b;border-color:#38363f}
