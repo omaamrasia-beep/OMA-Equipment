@@ -1,19 +1,37 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="antialiased bg-slate-50 text-slate-800">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Project Equipment Report — AMR Asia</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Existing Library Imports -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="styles.css?v=1790324153157">
+
+<!-- Tailwind CSS Setup -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: { sans: ['Inter', 'IBM Plex Sans Thai', 'sans-serif'] },
+        colors: { brand: { 50: '#fef2f2', 100: '#fee2e2', 500: '#D93A2B', 600: '#b92d20', 700: '#992218' } },
+        boxShadow: { 'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)', 'float': '0 10px 30px -5px rgba(0, 0, 0, 0.1)', 'lift': '0 20px 40px -10px rgba(0, 0, 0, 0.15)' }
+      }
+    }
+  }
+</script>
+
+<!-- Meta & Icons -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#D93A2B">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -22,70 +40,164 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Equipment Report">
+
+<!-- Custom Styles merging your classes with modern aesthetics -->
+<style>
+  :root { --accent: #D93A2B; --surface: #ffffff; --bg: #f8fafc; --ink: #0f172a; --ink-soft: #64748b; --line: #e2e8f0; --accent-deep: #b92d20; --line-soft: #f1f5f9; --shadow: 0 4px 20px -2px rgba(0,0,0,0.05); }
+  body { -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
+  
+  /* Core Panel Logic */
+  .panel { display: none; animation: fadeIn 0.3s ease; }
+  .panel.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Mapped Classes from Original HTML */
+  .tin { @apply w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-sm transition-all outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10; }
+  select.tin { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 1rem center; background-size: 1rem; padding-right: 2.5rem; }
+  textarea.tin { min-height: 100px; resize: vertical; }
+  
+  .btn { @apply inline-flex items-center justify-center font-semibold rounded-xl transition-all cursor-pointer text-sm; }
+  .btn-soft { @apply bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm py-3 px-5; }
+  .btn-primary { @apply bg-brand-500 text-white hover:bg-brand-600 shadow-float py-3 px-5 border-none; }
+  .btn-danger { @apply bg-red-500 text-white hover:bg-red-600 shadow-float py-3 px-5 border-none; }
+  .ghost-btn { @apply bg-transparent border border-slate-200 text-slate-600 hover:bg-slate-50 py-2.5 px-4 rounded-xl text-sm font-medium cursor-pointer; }
+  
+  .dash-card { @apply bg-white border border-slate-100 rounded-2xl p-5 shadow-soft flex flex-col; }
+  .dc-head { @apply flex justify-between items-start mb-4; }
+  .dc-head b { @apply text-base font-bold text-slate-800; }
+  
+  .card { @apply bg-white border border-slate-100 rounded-2xl p-5 shadow-soft mb-5; }
+  .card-h { @apply flex items-center gap-3 mb-5; }
+  .card-h h3 { @apply text-lg font-bold text-slate-800 m-0; }
+  .step { @apply bg-brand-50 text-brand-600 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shrink-0; }
+  .req { @apply text-brand-500 ml-1; }
+  .pill { @apply bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-xs font-bold ml-1; }
+
+  /* Typography & Layout elements */
+  .panel-title { @apply text-2xl font-bold tracking-tight text-slate-900 mb-6; }
+  .field { @apply mb-4; }
+  .field label { @apply block text-sm font-semibold text-slate-600 mb-1.5; }
+  
+  /* Specific UI Mappings for JS compatibility */
+  .combo { @apply relative; }
+  .combo.disabled { @apply opacity-50 pointer-events-none; }
+  .imgslot { @apply flex flex-col gap-2; }
+  .drop { @apply bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl aspect-square flex flex-col items-center justify-center p-4 text-center cursor-pointer hover:border-brand-500 hover:bg-brand-50 transition-colors relative overflow-hidden; }
+  .ph-content { @apply flex flex-col items-center pointer-events-none; }
+  .drop-hint { @apply text-xs text-slate-500 flex flex-col items-center mt-2; }
+  .drop-hint b { @apply text-slate-700 font-semibold mb-1; }
+  .replace-badge { @apply absolute bottom-2 bg-black/60 text-white text-[10px] px-2 py-1 rounded-full opacity-0 transition-opacity; }
+  .drop:hover .replace-badge { @apply opacity-100; }
+  .cap { @apply text-xs text-slate-600 font-medium; }
+  .tagn { @apply font-bold text-slate-800 mr-1; }
+  
+  .ro-banner { @apply bg-amber-50 text-amber-700 border border-amber-200 p-3 rounded-xl text-sm font-medium mb-4 text-center; }
+  .table-wrap { @apply overflow-x-auto bg-white border border-slate-100 rounded-2xl shadow-soft; }
+  table { @apply w-full text-left text-sm whitespace-nowrap; }
+  th { @apply bg-slate-50 px-4 py-3 font-semibold text-slate-500 border-b border-slate-200; }
+  td { @apply px-4 py-3 border-b border-slate-100 text-slate-700; }
+  
+  .flt-drawer-body { @apply flex flex-wrap gap-2 mt-3 p-3 bg-slate-50 rounded-xl border border-slate-200; }
+  .flt-drawer-toggle { @apply cursor-pointer font-medium text-sm text-slate-600 py-2.5 px-4 bg-white border border-slate-200 rounded-xl hover:bg-slate-50; list-style: none; }
+  .flt-drawer-toggle::-webkit-details-marker { display: none; }
+  
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+</style>
 </head>
-<body>
+<body class="min-h-screen pb-20 sm:pb-8">
 
 <!-- ══════════════════════ AUTH GATE ══════════════════════ -->
-<div id="authGate">
-  <div class="auth-card">
-    <div class="auth-brand">
-      <div class="auth-logo-box" id="authLogoBox">
-        <!-- Logo injected by JS after it loads successfully -->
-        <span class="auth-logo-fallback" id="authLogoFallback">AMR ASIA</span>
+<div id="authGate" class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-100 backdrop-blur-sm p-4 transition-opacity">
+  <div class="auth-card bg-white w-full max-w-sm rounded-3xl p-8 shadow-float border border-slate-100">
+    <div class="auth-brand text-center mb-8">
+      <div class="auth-logo-box inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-50 text-brand-500 mb-4 shadow-inner" id="authLogoBox">
+        <span class="auth-logo-fallback font-bold text-xl tracking-tight" id="authLogoFallback">AMR ASIA</span>
       </div>
       <div class="info">
-        <h2>Sign In</h2>
-        <div class="sub">AMR Inspection · OMA</div>
+        <h2 class="text-2xl font-bold text-slate-900">Sign In</h2>
+        <div class="sub text-sm text-slate-500 mt-1 font-medium">AMR Inspection · OMA</div>
       </div>
     </div>
-    <label for="authUser">Username</label>
-    <input type="text" class="tin" id="authUser" autocomplete="off" placeholder="username">
-    <label for="authPass">Password</label>
-    <div class="auth-pw">
-      <input type="password" class="tin" id="authPass" autocomplete="current-password" placeholder="••••••••">
-      <span class="eye" id="authEye">Show</span>
+    <div class="space-y-4">
+      <div>
+        <label for="authUser" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Username</label>
+        <input type="text" class="tin" id="authUser" autocomplete="off" placeholder="Enter username">
+      </div>
+      <div>
+        <label for="authPass" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Password</label>
+        <div class="auth-pw relative">
+          <input type="password" class="tin pr-16" id="authPass" autocomplete="current-password" placeholder="••••••••">
+          <span class="eye absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-brand-500 cursor-pointer" id="authEye">Show</span>
+        </div>
+      </div>
+      <div class="auth-err text-red-500 text-sm font-medium text-center hidden" id="authErr"></div>
+      <button class="auth-btn btn-primary w-full py-3.5 text-base rounded-xl mt-2" id="authBtn">Sign In</button>
+      <div class="auth-foot text-center text-xs text-slate-400 mt-6 font-medium">AMR ASIA CO., LTD. · Equipment Inspection System</div>
     </div>
-    <div class="auth-err" id="authErr"></div>
-    <button class="auth-btn" id="authBtn">Sign In</button>
-    <div class="auth-foot">AMR ASIA CO., LTD. · Equipment Inspection System</div>
   </div>
 </div>
 
 <!-- ══════════════════════ PDPA ════════════════════════════ -->
-<div id="pdpaBanner">
-  <div class="pd-head"><div class="pd-ic">🛡</div><b>Privacy &amp; Personal Data</b></div>
-  <div class="pd-body">
-    This system records your usage data for auditing and maintenance purposes.
-    <a id="pdpaToggle">View details</a>
-    <div class="pd-extra" id="pdpaExtra">Data collected: username, role, login time, inspection records and equipment photos, in accordance with the Personal Data Protection Act B.E. 2562 (2019).</div>
-  </div>
-  <div class="pd-actions">
-    <button class="pd-btn pd-detail" id="pdpaDetailBtn">Details</button>
-    <button class="pd-btn pd-accept" id="pdpaAccept">Accept</button>
+<div id="pdpaBanner" class="fixed bottom-0 left-0 right-0 z-[9900] bg-white border-t border-slate-200 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] p-4 sm:p-6 transition-transform translate-y-full" style="display:none;">
+  <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div class="flex-1">
+      <div class="pd-head flex items-center gap-2 mb-1"><div class="pd-ic text-xl">🛡</div><b class="text-sm font-bold text-slate-800">Privacy &amp; Personal Data</b></div>
+      <div class="pd-body text-xs text-slate-600 leading-relaxed">
+        This system records your usage data for auditing and maintenance purposes.
+        <a id="pdpaToggle" class="text-brand-500 font-semibold cursor-pointer ml-1 hover:underline">View details</a>
+        <div class="pd-extra mt-2 text-[11px] text-slate-500 bg-slate-50 p-3 rounded-lg hidden" id="pdpaExtra">Data collected: username, role, login time, inspection records and equipment photos, in accordance with the Personal Data Protection Act B.E. 2562 (2019).</div>
+      </div>
+    </div>
+    <div class="pd-actions flex gap-2 shrink-0 w-full sm:w-auto">
+      <button class="pd-btn pd-detail ghost-btn flex-1 sm:flex-none" id="pdpaDetailBtn">Details</button>
+      <button class="pd-btn pd-accept btn-primary flex-1 sm:flex-none" id="pdpaAccept">Accept</button>
+    </div>
   </div>
 </div>
 
 <!-- ══════════════════════ HEADER ══════════════════════════ -->
-<header class="app">
-  <div class="brandmark" id="headerBrandmark">
-    <!-- Logo injected by JS -->
-    <span style="font-size:13px;font-weight:700;color:var(--accent-deep)" id="headerLogoFallback">AMR ASIA</span>
+<header class="app sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+  <div class="flex items-center gap-3">
+    <div class="brandmark w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center shrink-0" id="headerBrandmark">
+      <span class="text-[10px] font-black text-brand-600 leading-none" id="headerLogoFallback">AMR<br>ASIA</span>
+    </div>
+    <div class="brand-text hidden sm:block">
+      <h1 class="font-bold text-slate-900 leading-tight">Project Equipment</h1>
+      <div class="sub text-xs text-slate-500 font-medium">Reporting System</div>
+    </div>
   </div>
-  <div class="brand-text">
-    <h1>Project Equipment Report</h1>
-    <div class="sub">Project Equipment Report</div>
+  
+  <div class="flex items-center gap-3 sm:gap-5">
+    <div class="header-stat hidden sm:flex flex-col items-end">
+      <div class="lbl text-[10px] uppercase font-bold text-slate-400 tracking-wider">Recorded</div>
+      <div class="num text-lg font-black text-brand-500 leading-none" id="statCount">0</div>
+    </div>
+    <div class="h-8 w-px bg-slate-200 hidden sm:block"></div>
+    <div class="user-chip flex items-center gap-2 bg-slate-50 p-1 pr-3 rounded-full border border-slate-100 cursor-pointer hover:bg-slate-100 transition-colors" id="userChip" style="display:none">
+      <div class="av w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm" id="uAvatar">?</div>
+      <div class="hidden md:block">
+        <div class="un text-sm font-semibold text-slate-800 leading-none" id="uName">—</div>
+        <div class="ur text-[10px] text-slate-500 uppercase mt-1 font-medium" id="uRole">—</div>
+      </div>
+      <span class="logout text-xs font-bold text-red-500 ml-2 hover:underline" id="logoutBtn" title="Sign out">Exit</span>
+    </div>
+    <button id="darkToggleBtn" class="hdr-ctrl-btn icon-toggle-btn w-10 h-10 rounded-full flex items-center justify-center bg-slate-50 text-slate-500 hover:bg-slate-100" title="Dark / Light mode">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
   </div>
-  <div class="header-stat"><div class="num" id="statCount">0</div><div class="lbl">Recorded</div></div>
-  <div class="user-chip" id="userChip" style="display:none">
-    <div class="av" id="uAvatar">?</div>
-    <div><div class="un" id="uName">—</div><div class="ur" id="uRole">—</div></div>
-    <span class="logout" id="logoutBtn" title="Sign out">Sign Out</span>
-  </div>
-  <button id="darkToggleBtn" class="hdr-ctrl-btn icon-toggle-btn" title="Dark / Light mode"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
 </header>
 
 <!-- ══════════════════════ TABS ════════════════════════════ -->
-<nav class="tabs">
+<nav class="tabs sticky top-[64px] sm:top-[68px] z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 py-2 flex overflow-x-auto gap-2 scrollbar-hide shadow-sm">
+  <style>
+    .tab { @apply whitespace-nowrap px-5 py-2 rounded-full text-sm font-semibold text-slate-500 cursor-pointer transition-all border border-transparent; }
+    .tab:hover { @apply bg-slate-50 text-slate-700; }
+    .tab.active { @apply bg-slate-800 text-white shadow-md; }
+  </style>
   <button class="tab active" data-tab="dash" id="tabDash">Overview</button>
   <button class="tab" data-tab="add" id="tabAdd">Add Record</button>
   <button class="tab" data-tab="saved">Records <span class="pill" id="savedPill">0</span></button>
@@ -93,483 +205,676 @@
   <button class="tab" data-tab="users" id="tabUsers">Users <span class="pill" id="usersPill">0</span></button>
 </nav>
 
-<main>
+<main class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
 
 <!-- ══════ PANEL: DASHBOARD ══════ -->
-<section class="panel active" id="panel-dash">
-  <div class="panel-title">Project Equipment Overview</div>
+<section class="panel active space-y-5" id="panel-dash">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+    <div class="panel-title mb-0">Project Equipment Overview</div>
+    <div class="flex items-center gap-2 bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm shrink-0">
+      <label class="pl-3 text-xs font-semibold text-slate-500">Show:</label>
+      <select id="dashMainFilter" class="tin border-none shadow-none bg-transparent py-1.5 pl-2 pr-8 text-sm focus:ring-0 w-auto min-w-[160px]"><option value="__all">All Projects</option></select>
+    </div>
+  </div>
 
-  <div id="leaderDashSection" style="display:none;margin-bottom:18px">
-    <div class="dash-card">
-      <div class="dc-head"><b>My Projects Overview</b><span id="leaderDonutLegend" style="font-size:12px;color:var(--ink-soft)"></span></div>
-      <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
-        <div style="position:relative;flex:none;width:200px;height:200px">
-          <canvas id="leaderDonutCanvas" width="200" height="200" style="cursor:pointer"></canvas>
-          <div id="leaderDonutCenter" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none">
-            <div style="font-size:28px;font-weight:700;color:var(--accent)" id="leaderDonutPct">0%</div>
-            <div style="font-size:11px;color:var(--ink-soft)">Total</div>
+  <div id="leaderDashSection" style="display:none;">
+    <div class="dash-card bg-gradient-to-br from-slate-800 to-slate-900 text-white border-none shadow-lift">
+      <div class="dc-head mb-6"><b class="text-white text-lg">My Projects Overview</b><span id="leaderDonutLegend" class="text-xs text-slate-300"></span></div>
+      <div class="flex flex-col md:flex-row items-center gap-8">
+        <div class="relative shrink-0 w-[200px] h-[200px]">
+          <canvas id="leaderDonutCanvas" width="200" height="200" class="cursor-pointer drop-shadow-md"></canvas>
+          <div id="leaderDonutCenter" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
+            <div class="text-3xl font-black text-white" id="leaderDonutPct">0%</div>
+            <div class="text-xs text-slate-300 font-medium">Total</div>
           </div>
         </div>
-        <div id="leaderDonutList" style="flex:1;min-width:200px;display:flex;flex-direction:column;gap:8px"></div>
+        <div id="leaderDonutList" class="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
       </div>
     </div>
   </div>
 
-  <div id="projDetailModal" style="display:none;position:fixed;inset:0;z-index:400;background:rgba(20,26,34,.6);align-items:center;justify-content:center;padding:20px">
-    <div style="background:var(--surface);border-radius:18px;max-width:480px;width:100%;padding:28px;box-shadow:var(--shadow-lift);position:relative">
-      <button onclick="document.getElementById('projDetailModal').style.display='none'" style="position:absolute;top:14px;right:16px;font-size:20px;color:var(--ink-faint);cursor:pointer;background:none;border:none">&times;</button>
-      <div id="projDetailContent"></div>
-    </div>
-  </div>
+  <!-- Note: JS will inject HTML into #kpiRow. I added grid classes here to format the injected items nicely. -->
+  <div class="kpi-row grid grid-cols-2 lg:grid-cols-4 gap-4" id="kpiRow"></div>
 
-  <div style="margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-    <label style="font-size:13px;font-weight:600;color:var(--ink-soft)">Show:</label>
-    <select id="dashMainFilter" class="tin" style="width:auto;min-width:180px;font-size:13px;padding:8px 12px"><option value="__all">All Projects</option></select>
-  </div>
-  <div class="kpi-row" id="kpiRow"></div>
-  <div class="dash-card" id="ganttCard" style="margin-bottom:14px;display:none">
+  <div class="dash-card" id="ganttCard" style="display:none">
     <div class="dc-head"><b>Project Timeline</b></div>
-    <div id="ganttWrap" style="position:relative"><canvas id="ganttCanvas"></canvas></div>
-    <div style="display:flex;gap:16px;margin-top:12px;font-size:11px;color:var(--ink-soft)">
-      <span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#2E9E6B;margin-right:5px"></span>On track</span>
-      <span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#F97316;margin-right:5px"></span>Due within 14 days</span>
-      <span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#EF4444;margin-right:5px"></span>Overdue</span>
+    <div id="ganttWrap" class="relative w-full overflow-x-auto pb-2"><canvas id="ganttCanvas" class="min-w-[600px]"></canvas></div>
+    <div class="flex flex-wrap gap-4 mt-4 text-xs font-medium text-slate-500 bg-slate-50 p-3 rounded-lg w-max">
+      <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#2E9E6B]"></span>On track</span>
+      <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#F97316]"></span>Due within 14 days</span>
+      <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#EF4444]"></span>Overdue</span>
     </div>
   </div>
-  <div class="dash-card" style="margin-bottom:14px">
-    <div class="dc-head"><b>Recording Progress</b><span id="progTotalPct" style="font-size:20px;font-weight:700;color:var(--accent)"></span></div>
-    <div id="progSummary"></div>
-    <div id="progChart" style="margin-top:14px"></div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    <div class="dash-card">
+      <div class="dc-head items-center border-b border-slate-100 pb-3 mb-4">
+        <b>Recording Progress</b>
+        <span id="progTotalPct" class="text-2xl font-black text-brand-500 bg-brand-50 px-3 py-1 rounded-lg"></span>
+      </div>
+      <div id="progSummary" class="text-sm font-medium text-slate-500 mb-4"></div>
+      <div id="progChart" class="w-full"></div>
+    </div>
+    
+    <div class="dash-card">
+      <div class="dc-head items-center border-b border-slate-100 pb-3 mb-4">
+        <b>Daily Uploads</b>
+        <span id="dayRangeLbl" class="text-xs font-semibold bg-slate-100 px-2.5 py-1 rounded-md text-slate-500">Last 14 days</span>
+      </div>
+      <div id="chartDaily" class="relative h-[220px] w-full"><canvas id="chartDailyCanvas"></canvas></div>
+      <div id="dailyTableWrap" class="mt-4 overflow-x-auto rounded-xl border border-slate-100 hidden"></div>
+    </div>
   </div>
-  <div class="dash-card" style="margin-bottom:14px">
-    <div class="dc-head"><b>Daily Uploads</b><span id="dayRangeLbl" style="font-size:12px;color:var(--ink-soft)">Last 14 days</span></div>
-    <div id="chartDaily" style="position:relative;height:220px"><canvas id="chartDailyCanvas"></canvas></div>
-    <div id="dailyTableWrap" style="margin-top:14px;overflow-x:auto"></div>
-  </div>
-  <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px">
-    <div class="dash-card" style="flex:1;min-width:300px;height:340px;display:flex;flex-direction:column">
-      <div class="dc-head"><b>Status Breakdown</b></div>
-      <div id="statusDonutList" style="display:flex;gap:24px;flex-wrap:wrap"></div>
-      <div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:0">
-        <canvas id="statusDonutCanvas" width="140" height="140" style="cursor:pointer;width:140px;height:140px;flex:none"></canvas>
+
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-5">
+    <div class="dash-card lg:col-span-2 flex flex-col">
+      <div class="dc-head border-b border-slate-100 pb-3 mb-4"><b>Status Breakdown</b></div>
+      <div class="flex-1 flex flex-col sm:flex-row items-center gap-6 justify-center">
+        <div class="relative shrink-0 w-[160px] h-[160px]">
+          <canvas id="statusDonutCanvas" width="160" height="160" class="cursor-pointer"></canvas>
+        </div>
+        <div id="statusDonutList" class="flex flex-col gap-3 w-full sm:w-auto"></div>
       </div>
     </div>
-    <div class="dash-card" style="flex:1.4;min-width:340px;height:340px;display:flex;flex-direction:column">
-      <div class="dc-head"><b>Equipment by Location</b></div>
-      <select id="dashEquipLocFilter" class="tin" style="width:auto;min-width:160px;font-size:12.5px;padding:6px 10px;margin-bottom:10px"><option value="">All Locations</option></select>
-      <div id="dashEquipTableWrap" style="flex:1;overflow-y:auto"></div>
+    
+    <div class="dash-card lg:col-span-3 flex flex-col min-h-[380px]">
+      <div class="dc-head flex-wrap gap-3 items-center border-b border-slate-100 pb-3 mb-4">
+        <b>Equipment by Location</b>
+        <select id="dashEquipLocFilter" class="tin w-auto py-1.5 px-3 text-xs bg-slate-50"><option value="">All Locations</option></select>
+      </div>
+      <div id="dashEquipTableWrap" class="flex-1 overflow-y-auto pr-2 custom-scrollbar"></div>
     </div>
   </div>
-  <div class="dash-card" id="assignDashCard" style="display:none;margin-bottom:14px">
-    <div class="dc-head">
+
+  <div class="dash-card" id="assignDashCard" style="display:none">
+    <div class="dc-head items-center border-b border-slate-100 pb-3 mb-4">
       <b>Assignment Progress</b>
-      <select id="assignDashFProject" class="tin" style="width:auto;min-width:160px;font-size:12px;padding:6px 10px"><option value="">All Projects</option></select>
+      <select id="assignDashFProject" class="tin w-auto min-w-[160px] text-xs py-1.5 px-3 bg-slate-50"><option value="">All Projects</option></select>
     </div>
-    <div id="assignDashChart" style="margin-top:10px"></div>
+    <div id="assignDashChart" class="w-full"></div>
   </div>
-  <div style="text-align:center;margin-top:6px"><button class="btn btn-soft" id="dashRefresh">Refresh Data</button></div>
+  
+  <div class="text-center pt-2 pb-6"><button class="btn-soft rounded-full px-8 shadow-sm" id="dashRefresh">Refresh Dashboard Data</button></div>
 </section>
 
 <!-- ══════ PANEL: ADD ══════ -->
-<section class="panel" id="panel-add">
+<section class="panel max-w-3xl mx-auto" id="panel-add">
   <div class="panel-title" id="addTitle">Add New Record</div>
-  <button class="btn btn-soft qr-only" id="openQrScanBtn" style="width:100%;margin-bottom:16px;justify-content:center">Scan QR/Barcode to Open Form</button>
-  <div class="card">
+  <button class="btn-primary qr-only w-full py-4 text-base rounded-2xl shadow-float bg-slate-800 hover:bg-slate-900 mb-6 flex items-center justify-center gap-2" id="openQrScanBtn">
+    <span class="text-xl">📷</span> Scan QR / Barcode to Open Form
+  </button>
+  
+  <div class="card border-t-4 border-t-brand-500">
     <div class="card-h"><span class="step">1</span><h3>Select Equipment</h3></div>
     <div class="card-b">
-      <div class="cascade">
-        <div class="field"><label>Project <span class="req">*</span></label><div class="combo" data-level="project"></div></div>
+      <div class="cascade grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">
+        <div class="field md:col-span-2"><label>Project <span class="req">*</span></label><div class="combo" data-level="project"></div></div>
         <div class="field"><label>System</label><div class="combo disabled" data-level="system"></div></div>
         <div class="field"><label>Location Type</label><div class="combo disabled" data-level="typeloc"></div></div>
         <div class="field"><label>Location <span class="req">*</span></label><div class="combo disabled" data-level="loc"></div></div>
         <div class="field"><label>Sub-location</label><div class="combo disabled" data-level="sub"></div></div>
-        <div class="field"><label>Equipment Type</label><input type="text" id="inpAsset" placeholder="e.g. Firewall, Switch, Transceiver..." autocomplete="off"></div>
+        <div class="field"><label>Equipment Type</label><input type="text" id="inpAsset" class="tin" placeholder="e.g. Firewall, Switch..." autocomplete="off"></div>
         <div class="field"><label>Equipment <span class="req">*</span></label><div class="combo disabled" data-level="equip"></div></div>
-        <div class="field"><label>Serial Number</label><div class="combo disabled" data-level="serial"></div></div>
+        <div class="field md:col-span-2"><label>Serial Number</label><div class="combo disabled" data-level="serial"></div></div>
       </div>
-      <div class="bm-row">
-        <div class="bm-box"><div class="k">Brand AUTO</div><div class="v empty" id="bmBrand" data-empty="— Select equipment —"><input id="inpBrand" placeholder="—" style="display:none"></div></div>
-        <div class="bm-box"><div class="k">Model AUTO</div><div class="v empty" id="bmModel" data-empty="— Select equipment —"><input id="inpModel" placeholder="—" style="display:none"></div></div>
+      
+      <!-- Mocking .bm-row layout for injected contents -->
+      <div class="bm-row flex gap-4 mt-2 bg-slate-50 p-4 rounded-xl border border-slate-100">
+        <div class="bm-box flex-1"><div class="k text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Brand AUTO</div><div class="v empty font-medium text-slate-700" id="bmBrand" data-empty="— Select equipment —"><input class="tin" id="inpBrand" placeholder="—" style="display:none"></div></div>
+        <div class="w-px bg-slate-200"></div>
+        <div class="bm-box flex-1"><div class="k text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Model AUTO</div><div class="v empty font-medium text-slate-700" id="bmModel" data-empty="— Select equipment —"><input class="tin" id="inpModel" placeholder="—" style="display:none"></div></div>
       </div>
     </div>
   </div>
+
   <div class="card">
     <div class="card-h"><span class="step">2</span><h3>Attach Photos</h3></div>
     <div class="card-b">
-      <div class="imgs">
-        <div class="imgslot"><div class="cap"><span class="tagn">Photo 1</span> Full equipment photo</div>
-          <label class="drop" id="dropMain" for="fileMain"><div class="ph-content"><div class="drop-hint"><b>Choose main photo</b>Full view of the equipment</div></div><div class="replace-badge">Tap to replace</div></label>
+      <div class="imgs grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="imgslot"><div class="cap"><span class="tagn">Photo 1</span> Main</div>
+          <label class="drop" id="dropMain" for="fileMain"><div class="ph-content"><div class="text-2xl opacity-50 mb-1">📷</div><div class="drop-hint"><b>Main photo</b></div></div><div class="replace-badge">Tap to replace</div></label>
           <input type="file" id="fileMain" accept="image/*" hidden></div>
-        <div class="imgslot"><div class="cap"><span class="tagn">Photo 2</span> Sticker photo</div>
-          <label class="drop" id="dropSticker" for="fileSticker"><div class="ph-content"><div class="drop-hint"><b>Choose sticker photo</b>Equipment label/sticker</div></div><div class="replace-badge">Tap to replace</div></label>
+        <div class="imgslot"><div class="cap"><span class="tagn">Photo 2</span> Sticker</div>
+          <label class="drop" id="dropSticker" for="fileSticker"><div class="ph-content"><div class="text-2xl opacity-50 mb-1">🏷️</div><div class="drop-hint"><b>Sticker photo</b></div></div><div class="replace-badge">Tap to replace</div></label>
           <input type="file" id="fileSticker" accept="image/*" hidden></div>
-        <div class="imgslot"><div class="cap"><span class="tagn">Photo 3</span> Additional photo 1</div>
-          <label class="drop" id="dropImg3" for="fileImg3"><div class="ph-content"><div class="drop-hint"><b>Choose additional photo</b></div></div><div class="replace-badge">Tap to replace</div></label>
+        <div class="imgslot"><div class="cap"><span class="tagn">Photo 3</span> Extra 1</div>
+          <label class="drop" id="dropImg3" for="fileImg3"><div class="ph-content"><div class="text-2xl opacity-50 mb-1">➕</div><div class="drop-hint"><b>Additional</b></div></div><div class="replace-badge">Tap to replace</div></label>
           <input type="file" id="fileImg3" accept="image/*" hidden></div>
-        <div class="imgslot"><div class="cap"><span class="tagn">Photo 4</span> Additional photo 2</div>
-          <label class="drop" id="dropImg4" for="fileImg4"><div class="ph-content"><div class="drop-hint"><b>Choose additional photo</b></div></div><div class="replace-badge">Tap to replace</div></label>
+        <div class="imgslot"><div class="cap"><span class="tagn">Photo 4</span> Extra 2</div>
+          <label class="drop" id="dropImg4" for="fileImg4"><div class="ph-content"><div class="text-2xl opacity-50 mb-1">➕</div><div class="drop-hint"><b>Additional</b></div></div><div class="replace-badge">Tap to replace</div></label>
           <input type="file" id="fileImg4" accept="image/*" hidden></div>
       </div>
     </div>
   </div>
+
   <div class="card">
     <div class="card-h"><span class="step">3</span><h3>Inspection Details</h3></div>
     <div class="card-b">
       <div class="field"><label>Inspector Name <span class="req">*</span></label><div class="combo" id="inspCombo"></div></div>
-      <div class="field" style="margin-top:14px"><label>Note</label><textarea class="tin" id="inpNote" placeholder="Additional details"></textarea></div>
+      <div class="field mt-4"><label>Note</label><textarea class="tin" id="inpNote" placeholder="Additional details or remarks"></textarea></div>
     </div>
   </div>
-  <div class="form-actions">
-    <button class="btn btn-soft" id="resetBtn">Clear Form</button>
-    <button class="btn btn-primary" id="saveBtn">Save Record</button>
+  
+  <div class="form-actions flex flex-col-reverse sm:flex-row gap-3 pt-2">
+    <button class="btn-soft flex-1 py-4 text-base rounded-2xl" id="resetBtn">Clear Form</button>
+    <button class="btn-primary flex-[2] py-4 text-base rounded-2xl shadow-float" id="saveBtn">Save Record</button>
   </div>
 </section>
 
 <!-- ══════ PANEL: SAVED ══════ -->
 <section class="panel" id="panel-saved">
-  <div class="panel-title">Records</div>
-  <div class="ro-banner">Your account (observer) is view-only</div>
-  <div id="savedProgress" class="dash-card" style="margin-bottom:14px;display:none">
-    <div class="dc-head"><b>Recording Progress</b><select id="savedProgFilter" class="tin" style="width:auto;min-width:160px;font-size:12.5px;padding:6px 10px;display:none"></select></div>
-    <div id="savedProgBody"></div>
+  <div class="panel-title">Records History</div>
+  <div class="ro-banner" style="display:none;">Your account (observer) is view-only</div>
+  
+  <div id="savedProgress" class="dash-card mb-5" style="display:none">
+    <div class="dc-head items-center mb-0"><b>Recording Progress</b><select id="savedProgFilter" class="tin w-auto min-w-[160px] text-xs py-1 px-2" style="display:none"></select></div>
+    <div id="savedProgBody" class="mt-4"></div>
   </div>
-  <div id="myAssignmentsSection" style="display:none;margin-bottom:18px">
-    <div class="dash-card">
-      <div class="dc-head">
-        <b>Assigned Work <span class="pill" id="assignPill">0</span></b>
-        <div style="display:flex;gap:8px;align-items:center">
-          <button class="btn btn-soft" id="exportAssignBtn" style="font-size:12px;padding:6px 12px">Export Excel</button>
-          <button class="btn btn-soft" id="setProjectTargetBtn" style="font-size:12px;padding:6px 12px;display:none">Target</button>
-          <button class="btn btn-primary" id="assignWorkBtn" style="font-size:12px;padding:6px 14px;display:none">Assign Work</button>
-          <button id="assignSectionToggle" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--ink-soft)" title="Show/hide">▾</button>
+  
+  <div id="myAssignmentsSection" style="display:none;" class="mb-6">
+    <div class="dash-card bg-slate-800 text-white border-none shadow-md">
+      <div class="dc-head items-center mb-2">
+        <b class="text-white">Assigned Work <span class="pill bg-slate-700 text-white" id="assignPill">0</span></b>
+        <div class="flex gap-2 items-center">
+          <button class="btn-soft border-slate-600 bg-slate-700 text-slate-200 hover:bg-slate-600 text-xs py-1.5 px-3" id="exportAssignBtn">Export</button>
+          <button class="btn-soft border-slate-600 bg-slate-700 text-slate-200 hover:bg-slate-600 text-xs py-1.5 px-3" id="setProjectTargetBtn" style="display:none">Target</button>
+          <button class="btn-primary text-xs py-1.5 px-3" id="assignWorkBtn" style="display:none">Assign</button>
+          <button id="assignSectionToggle" class="text-xl text-slate-400 hover:text-white" title="Show/hide">▾</button>
         </div>
       </div>
-      <div id="assignStatsPanel" style="margin-top:12px"></div>
-      <div id="myAssignmentsList" style="display:flex;flex-direction:column;gap:10px;margin-top:8px"></div>
+      <div id="assignStatsPanel" class="mt-3"></div>
+      <div id="myAssignmentsList" class="flex flex-col gap-2 mt-4"></div>
     </div>
   </div>
-  <div class="saved-tools flt-toolbar" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
-    <input type="text" id="savedSearch" placeholder="Search records…" style="flex:1;min-width:180px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:9px 12px;outline:none">
-    <details class="flt-drawer">
-      <summary class="flt-drawer-toggle">Filters</summary>
-      <div class="flt-drawer-body">
-        <select id="savedFProject" class="tin" style="width:auto;min-width:130px"><option value="">All Projects</option></select>
-        <select id="savedFSystem" class="tin" style="width:auto;min-width:110px"><option value="">All Systems</option></select>
-        <select id="savedFLoc" class="tin" style="width:auto;min-width:130px"><option value="">All Locations</option></select>
-        <select id="savedFSub" class="tin" style="width:auto;min-width:130px"><option value="">All Sub-locations</option></select>
-        <select id="savedFEquip" class="tin" style="width:auto;min-width:150px"><option value="">All Equipment</option></select>
-        <select id="savedSort" class="tin" style="width:auto;min-width:160px">
+
+  <div class="flt-toolbar bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-wrap gap-3 items-center mb-5">
+    <div class="relative flex-1 min-w-[200px]">
+      <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">🔍</span>
+      <input type="text" id="savedSearch" class="tin pl-10 border-none bg-slate-50" placeholder="Search records by serial, name, or project…">
+    </div>
+    
+    <details class="flt-drawer relative">
+      <summary class="flt-drawer-toggle">Filters <span class="text-[10px] ml-1">▼</span></summary>
+      <div class="flt-drawer-body absolute right-0 top-full mt-2 w-64 bg-white shadow-xl rounded-2xl border border-slate-100 p-4 z-50 flex flex-col gap-3">
+        <div><label class="text-xs font-bold text-slate-500 mb-1 block">Project</label><select id="savedFProject" class="tin py-2 text-sm"><option value="">All Projects</option></select></div>
+        <div><label class="text-xs font-bold text-slate-500 mb-1 block">System</label><select id="savedFSystem" class="tin py-2 text-sm"><option value="">All Systems</option></select></div>
+        <div><label class="text-xs font-bold text-slate-500 mb-1 block">Location</label><select id="savedFLoc" class="tin py-2 text-sm"><option value="">All Locations</option></select></div>
+        <div><label class="text-xs font-bold text-slate-500 mb-1 block">Sub-location</label><select id="savedFSub" class="tin py-2 text-sm"><option value="">All Sub-locations</option></select></div>
+        <div><label class="text-xs font-bold text-slate-500 mb-1 block">Equipment</label><select id="savedFEquip" class="tin py-2 text-sm"><option value="">All Equipment</option></select></div>
+        <hr class="border-slate-100 my-1">
+        <div><label class="text-xs font-bold text-slate-500 mb-1 block">Sort By</label>
+        <select id="savedSort" class="tin py-2 text-sm">
           <option value="newest">Newest→Oldest</option><option value="oldest">Oldest→Newest</option>
           <option value="az">Equipment A→Z</option><option value="za">Equipment Z→A</option>
           <option value="proj_th_az">Project ก→ฮ</option><option value="proj_th_za">Project ฮ→ก</option>
           <option value="proj_en_az">Project A→Z</option><option value="proj_en_za">Project Z→A</option>
-        </select>
+        </select></div>
       </div>
     </details>
-    <button class="ghost-btn" id="exportXlsx">Export Excel</button>
-    <button class="ghost-btn word-report-only" id="openWordReportBtn" disabled>Report</button>
+    
+    <div class="w-px h-8 bg-slate-200 hidden sm:block"></div>
+    <button class="ghost-btn flex items-center gap-2" id="exportXlsx"><span class="text-emerald-600">📊</span> Export Excel</button>
+    <button class="ghost-btn word-report-only flex items-center gap-2" id="openWordReportBtn" disabled><span class="text-blue-600">📄</span> Report</button>
   </div>
-  <div class="rlist" id="savedGrid"></div>
+  
+  <div class="rlist grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" id="savedGrid">
+    <!-- Records will be injected here by JS -->
+  </div>
 </section>
-
-<!-- ══════ MODAL: IMPORT EXCEL (opened from the Master Data page) ══════ -->
-<div id="importExcelModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(20,26,34,.5);align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--surface);border-radius:18px;max-width:520px;width:100%;padding:28px;box-shadow:0 8px 40px rgba(0,0,0,.2);position:relative;max-height:90vh;overflow-y:auto">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <div style="font-size:17px;font-weight:700;color:var(--ink)">Import Equipment Data (Excel)</div>
-      <button id="importExcelModalClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink-faint)">&times;</button>
-    </div>
-    <label class="import-drop" for="fileXlsx">
-      <div class="id-ic">📁</div>
-      <b>Choose or drag an Excel file</b>
-      <span>Supports .xlsx · .xls · .csv</span>
-      <span class="id-btn">Choose File</span>
-    </label>
-    <input type="file" id="fileXlsx" accept=".xlsx,.xls,.csv" hidden>
-    <div class="import-cols" style="margin-top:14px">
-      <div style="font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:6px">Supported columns</div>
-      <div class="ic-grid"><span>Order</span><span>Project</span><span>System</span><span>Location Type</span><span>Location</span><span>Sub-location</span><span>Equipment Type</span><span>Equipment</span><span>Brand</span><span>Model</span><span>Serial Number</span></div>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
-      <button class="ghost-btn" onclick="downloadMasterTemplate()" style="flex:1;min-width:140px">Download Blank Form</button>
-      <button class="ghost-btn" onclick="downloadMasterData()" style="flex:1;min-width:140px">Download Current Data</button>
-    </div>
-    <div id="importPreview" style="margin-top:12px"></div>
-  </div>
-</div>
-
-<!-- ══════ WARP ANIMATION OVERLAY (shown while generating the Word report) ══════ -->
-<div id="warpOverlay" style="display:none;position:fixed;inset:0;z-index:99999;background:#03040c;overflow:hidden">
-  <canvas id="warpCanvas" style="position:absolute;inset:0;width:100%;height:100%;display:block"></canvas>
-  <div id="warpDone" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;flex-direction:column">
-    <canvas id="warpPlanet" width="240" height="240"></canvas>
-    <div id="warpDoneText">Report generated ✨</div>
-  </div>
-  <div id="warpStatus"></div>
-</div>
-
 
 <!-- ══════ PANEL: MASTER ══════ -->
 <section class="panel" id="panel-master">
-  <div class="panel-title">Master Data</div>
-  <div class="flt-toolbar" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
-    <input type="text" id="masterSearch" placeholder="Search master data…" style="flex:1;min-width:180px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:9px 12px;outline:none">
-    <details class="flt-drawer">
-      <summary class="flt-drawer-toggle">Filters</summary>
-      <div class="flt-drawer-body">
-        <select id="masterFProject" class="tin" style="width:auto;min-width:130px"><option value="">All Projects</option></select>
-        <select id="masterFSystem" class="tin" style="width:auto;min-width:110px"><option value="">All Systems</option></select>
-        <select id="masterFLoc" class="tin" style="width:auto;min-width:130px"><option value="">All Locations</option></select>
-        <select id="masterFSub" class="tin" style="width:auto;min-width:130px"><option value="">All Sub-locations</option></select>
-        <select id="masterFEquip" class="tin" style="width:auto;min-width:150px"><option value="">All Equipment</option></select>
-        <select id="masterFMissing" class="tin" style="width:auto;min-width:160px">
-          <option value="">Show All</option>
-          <option value="brand">Missing Brand</option>
-          <option value="model">Missing Model</option>
-          <option value="serial">Missing Serial</option>
-          <option value="any">Missing Any Field</option>
-        </select>
-        <select id="masterFSort" class="tin" style="width:auto;min-width:160px">
-          <option value="order_asc">Order Low→High</option>
-          <option value="order_desc">Order High→Low</option>
-        </select>
+  <div class="panel-title">Master Equipment Data</div>
+  
+  <div class="flt-toolbar bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-wrap gap-3 items-center mb-5">
+    <div class="relative flex-1 min-w-[200px]">
+      <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">🔍</span>
+      <input type="text" id="masterSearch" class="tin pl-10 border-none bg-slate-50" placeholder="Search master data…">
+    </div>
+    
+    <details class="flt-drawer relative">
+      <summary class="flt-drawer-toggle">Filters <span class="text-[10px] ml-1">▼</span></summary>
+      <div class="flt-drawer-body absolute left-0 md:left-auto md:right-0 top-full mt-2 w-72 bg-white shadow-xl rounded-2xl border border-slate-100 p-4 z-50 grid grid-cols-2 gap-3">
+        <div class="col-span-2"><label class="text-xs font-bold text-slate-500 mb-1 block">Project</label><select id="masterFProject" class="tin py-1.5 px-2 text-xs"><option value="">All</option></select></div>
+        <div><label class="text-xs font-bold text-slate-500 mb-1 block">System</label><select id="masterFSystem" class="tin py-1.5 px-2 text-xs"><option value="">All</option></select></div>
+        <div><label class="text-xs font-bold text-slate-500 mb-1 block">Location</label><select id="masterFLoc" class="tin py-1.5 px-2 text-xs"><option value="">All</option></select></div>
+        <div><label class="text-xs font-bold text-slate-500 mb-1 block">Sub-loc</label><select id="masterFSub" class="tin py-1.5 px-2 text-xs"><option value="">All</option></select></div>
+        <div><label class="text-xs font-bold text-slate-500 mb-1 block">Equipment</label><select id="masterFEquip" class="tin py-1.5 px-2 text-xs"><option value="">All</option></select></div>
+        <div class="col-span-2"><label class="text-xs font-bold text-slate-500 mb-1 block">Missing Data Filter</label>
+        <select id="masterFMissing" class="tin py-1.5 px-2 text-xs">
+          <option value="">Show All</option><option value="brand">Missing Brand</option><option value="model">Missing Model</option><option value="serial">Missing Serial</option><option value="any">Missing Any Field</option>
+        </select></div>
+        <div class="col-span-2"><label class="text-xs font-bold text-slate-500 mb-1 block">Sort</label>
+        <select id="masterFSort" class="tin py-1.5 px-2 text-xs"><option value="order_asc">Order Low→High</option><option value="order_desc">Order High→Low</option></select></div>
       </div>
     </details>
-    <button class="btn btn-primary edit-only" id="addMasterBtn">Add Equipment</button>
-    <button class="btn btn-danger edit-only" id="bulkDelMasterBtn" style="background:#EF4444;color:#fff;border:none">Delete by Filter</button>
-    <button class="ghost-btn edit-only" id="openImportExcelBtn">Import Equipment Data (Excel)</button>
-    <button class="ghost-btn admin-only" id="openQrMasterBtn">QR Code</button>
+    
+    <div class="flex flex-wrap gap-2 w-full lg:w-auto mt-2 lg:mt-0 lg:ml-auto">
+      <button class="btn-primary edit-only py-2 px-4 text-sm" id="addMasterBtn">+ Add Equipment</button>
+      <button class="btn-danger edit-only py-2 px-4 text-sm bg-red-50" id="bulkDelMasterBtn" style="color:red; background:#fef2f2; border:1px solid #fecaca; box-shadow:none;">Delete by Filter</button>
+      <button class="ghost-btn edit-only py-2 px-4 text-sm" id="openImportExcelBtn">Import Excel</button>
+      <button class="ghost-btn admin-only py-2 px-4 text-sm bg-slate-800 text-white border-slate-800 hover:bg-slate-700" id="openQrMasterBtn">Generate QR Codes</button>
+    </div>
   </div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th title="Order used for generating Word/PDF">Order</th><th>Project</th><th>System</th><th>Location Type</th><th>Location</th><th>Sub-location</th><th>Equipment Type</th><th>Equipment</th><th>Brand</th><th>Model</th><th>Serial</th><th></th></tr></thead>
-      <tbody id="masterBody"></tbody>
+
+  <div class="table-wrap custom-scrollbar">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 uppercase text-[10px] tracking-wider text-slate-500">
+        <tr><th title="Order used for generating Word/PDF" class="w-16 text-center">Order</th><th>Project</th><th>System</th><th>Loc Type</th><th>Location</th><th>Sub-loc</th><th>Eq. Type</th><th>Equipment</th><th>Brand</th><th>Model</th><th>Serial</th><th class="w-16"></th></tr>
+      </thead>
+      <tbody id="masterBody" class="divide-y divide-slate-100">
+        <!-- Master data injected here by JS -->
+      </tbody>
     </table>
   </div>
-  <div id="masterLoadMoreWrap" style="text-align:center;margin-top:14px"></div>
+  <div id="masterLoadMoreWrap" class="text-center mt-6"></div>
 </section>
 
 <!-- ══════ PANEL: USERS ══════ -->
-<section class="panel" id="panel-users">
-  <div class="admin-only" style="margin-bottom:22px">
-    <div class="panel-title" style="font-size:16px">Page Permissions</div>
-    <div id="pagePermContainer" style="background:var(--surface);border:1px solid var(--line-soft);border-radius:14px;padding:16px;box-shadow:var(--shadow)"></div>
+<section class="panel max-w-5xl mx-auto" id="panel-users">
+  <div class="admin-only mb-8">
+    <div class="panel-title text-xl mb-4">Page Permissions Settings</div>
+    <div id="pagePermContainer" class="bg-white border border-slate-100 rounded-2xl p-6 shadow-soft"></div>
   </div>
-  <div class="panel-title">Manage Users</div>
-  <div class="user-cols">
-    <div class="card"><div class="card-b">
-      <div class="card-h"><span class="step">+</span><h3>Add User</h3></div>
-      <div class="field"><label>Username <span class="req">*</span></label><input type="text" class="tin" id="nuUser" placeholder="e.g. somchai.j" autocomplete="off"></div>
-      <div class="field" style="margin-top:12px"><label>Password <span class="req">*</span></label><input type="text" class="tin" id="nuPass" placeholder="Set an initial password" autocomplete="off"></div>
-      <div class="field" style="margin-top:12px"><label>Full Name</label><input type="text" class="tin" id="nuName" placeholder="Display name"></div>
-      <div class="field" style="margin-top:12px"><label>Email</label><input type="email" class="tin" id="nuEmail" placeholder="For notifications (optional)" autocomplete="off"></div>
-      <div class="field" style="margin-top:12px"><label>Role <span class="req">*</span></label>
-        <select class="tin" id="nuRole">
-          <option value="inspector">inspector — Inspector</option>
-          <option value="observer">observer — Observer</option>
-          <option value="leader">leader — Team Lead</option>
-          <option value="manager">manager — Manager</option>
-          <option value="admin">admin — Administrator</option>
-        </select>
-      </div>
-      <div id="nuProjectChips" class="chips-box" style="margin-top:12px"></div>
-      <div class="field" style="margin-top:12px"><label>Project</label>
-        <div style="display:flex;align-items:center;gap:8px">
-          <input type="text" class="tin" id="nuProject" list="nuProjectList" placeholder="Select a project then press +" style="flex:1">
-          <button type="button" class="round-add-btn" id="nuProjectAdd" title="Add this project">+</button>
+  
+  <div class="panel-title text-xl mb-4">Manage System Users</div>
+  <div class="user-cols grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="card !mb-0 h-full">
+      <div class="card-b">
+        <div class="card-h mb-6"><span class="step bg-slate-800 text-white">+</span><h3>Add New User</h3></div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="field"><label>Username <span class="req">*</span></label><input type="text" class="tin" id="nuUser" placeholder="e.g. somchai.j" autocomplete="off"></div>
+          <div class="field"><label>Password <span class="req">*</span></label><input type="text" class="tin" id="nuPass" placeholder="Set initial password" autocomplete="off"></div>
+          <div class="field"><label>Full Name</label><input type="text" class="tin" id="nuName" placeholder="Display name"></div>
+          <div class="field"><label>Role <span class="req">*</span></label>
+            <select class="tin" id="nuRole">
+              <option value="inspector">Inspector</option>
+              <option value="observer">Observer (View Only)</option>
+              <option value="leader">Team Lead</option>
+              <option value="manager">Manager</option>
+              <option value="admin">Administrator</option>
+            </select>
+          </div>
+          <div class="field sm:col-span-2"><label>Email</label><input type="email" class="tin" id="nuEmail" placeholder="For notifications (optional)" autocomplete="off"></div>
+          
+          <div class="field sm:col-span-2 mb-0">
+            <label>Assigned Projects</label>
+            <div id="nuProjectChips" class="flex flex-wrap gap-2 mb-2 empty:hidden"></div>
+            <div class="flex items-center gap-2">
+              <input type="text" class="tin flex-1" id="nuProject" list="nuProjectList" placeholder="Select project, then press +">
+              <button type="button" class="btn-soft w-11 h-11 p-0 rounded-xl flex items-center justify-center text-xl font-bold hover:bg-brand-50 hover:text-brand-600 hover:border-brand-200" id="nuProjectAdd" title="Add this project">+</button>
+            </div>
+            <datalist id="nuProjectList"></datalist>
+          </div>
         </div>
-        <datalist id="nuProjectList"></datalist>
+        <button class="btn-primary w-full mt-6 py-3.5" id="nuAdd">Create User Account</button>
       </div>
-      <button class="btn btn-primary" id="nuAdd" style="margin-top:16px">Add User</button>
-    </div></div>
-    <div class="card"><div class="card-b">
-      <div class="card-h"><span class="step">⬆</span><h3>Import from Excel</h3></div>
-      <label class="import-drop" for="fileUsers" style="padding:26px 18px">
-        <div class="id-ic" style="width:52px;height:52px;font-size:22px">📁</div>
-        <b>Choose or drag an Excel file</b><span>.xlsx · .xls · .csv</span>
-        <span class="id-btn">Choose File</span>
-      </label>
-      <input type="file" id="fileUsers" accept=".xlsx,.xls,.csv" hidden>
-      <div class="import-cols" style="margin-top:14px">
-        <div style="font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:6px">Supported columns</div>
-        <div class="ic-grid"><span>username</span><span>password</span><span>name</span><span>role</span><span>project</span><span>email</span></div>
+    </div>
+    
+    <div class="card !mb-0 h-full flex flex-col">
+      <div class="card-b flex-1 flex flex-col">
+        <div class="card-h mb-6"><span class="step bg-blue-100 text-blue-600">⬆</span><h3>Import Users from Excel</h3></div>
+        
+        <label class="import-drop flex-1 flex flex-col items-center justify-center p-8 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors" for="fileUsers">
+          <div class="id-ic text-5xl mb-3">📁</div>
+          <b class="text-slate-700 text-lg mb-1">Choose or drag an Excel file</b>
+          <span class="text-slate-500 text-sm mb-4">Supports .xlsx · .xls · .csv</span>
+          <span class="id-btn btn-soft py-2 px-6 rounded-full text-sm">Browse File</span>
+        </label>
+        <input type="file" id="fileUsers" accept=".xlsx,.xls,.csv" hidden>
+        
+        <div class="import-cols mt-5 bg-white border border-slate-100 p-4 rounded-xl shadow-sm">
+          <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Required Columns</div>
+          <div class="flex flex-wrap gap-2 text-xs font-mono text-slate-600">
+            <span class="bg-slate-100 px-2 py-1 rounded">username</span>
+            <span class="bg-slate-100 px-2 py-1 rounded">password</span>
+            <span class="bg-slate-100 px-2 py-1 rounded">name</span>
+            <span class="bg-slate-100 px-2 py-1 rounded">role</span>
+            <span class="bg-slate-100 px-2 py-1 rounded">project</span>
+            <span class="bg-slate-100 px-2 py-1 rounded">email</span>
+          </div>
+        </div>
+        
+        <div class="flex gap-3 mt-4">
+          <button class="ghost-btn flex-1 text-xs py-2 bg-slate-50" onclick="downloadUsersTemplate()">Blank Form</button>
+          <button class="ghost-btn flex-1 text-xs py-2 bg-slate-50" onclick="downloadUsersData()">Export Users</button>
+        </div>
+        <div id="usersImportMsg" class="mt-3 text-sm text-center font-medium"></div>
       </div>
-      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
-        <button class="ghost-btn" onclick="downloadUsersTemplate()" style="flex:1;min-width:140px">Download Blank Form</button>
-        <button class="ghost-btn" onclick="downloadUsersData()" style="flex:1;min-width:140px">Download User Data</button>
-      </div>
-      <div id="usersImportMsg" style="margin-top:12px"></div>
-    </div></div>
+    </div>
   </div>
-  <div style="margin-top:20px;display:flex;gap:10px">
-    <input type="text" id="usersSearch" placeholder="Search users…" style="flex:1;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:9px 12px;outline:none">
-    <button class="btn btn-soft" id="usersRefresh">Refresh</button>
+  
+  <div class="mt-8 mb-4 flex gap-3">
+    <div class="relative flex-1">
+      <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+      <input type="text" id="usersSearch" placeholder="Search users by name, role, or project…" class="tin pl-10">
+    </div>
+    <button class="btn-soft" id="usersRefresh">Refresh List</button>
   </div>
-  <div class="table-wrap" style="margin-top:14px">
-    <table>
-      <thead><tr><th>Username</th><th>Password</th><th>Full Name</th><th>Role</th><th>Project</th><th>Email</th><th>Status</th><th></th></tr></thead>
-      <tbody id="usersBody"></tbody>
+  
+  <div class="table-wrap custom-scrollbar">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 uppercase text-[10px] tracking-wider text-slate-500">
+        <tr><th>Username</th><th>Password</th><th>Full Name</th><th>Role</th><th>Project</th><th>Email</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody id="usersBody" class="divide-y divide-slate-100">
+        <!-- Users injected here by JS -->
+      </tbody>
     </table>
   </div>
 </section>
 
-<!-- ══════ ASSIGN MODAL ══════ -->
-<div id="assignModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(20,26,34,.5);align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--surface);border-radius:18px;max-width:520px;width:100%;padding:28px;box-shadow:0 8px 40px rgba(0,0,0,.2);position:relative;max-height:90vh;overflow-y:auto">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <div style="font-size:17px;font-weight:700;color:var(--ink)">Assign Work</div>
-      <button id="assignModalClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink-faint)">&times;</button>
+<!-- ══════ MODALS AND OVERLAYS ══════ -->
+
+<!-- Add necessary structure for projDetailModal (Used in Dashboard) -->
+<div id="projDetailModal" style="display:none;position:fixed;inset:0;z-index:400;background:rgba(15,23,42,.6);align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);">
+  <div class="bg-white rounded-3xl max-w-[480px] w-full p-8 shadow-2xl relative">
+    <button onclick="document.getElementById('projDetailModal').style.display='none'" class="absolute top-5 right-5 text-slate-400 hover:text-slate-700 text-2xl font-bold leading-none bg-slate-50 hover:bg-slate-100 w-10 h-10 rounded-full flex items-center justify-center transition-colors">&times;</button>
+    <div id="projDetailContent"></div>
+  </div>
+</div>
+
+<!-- Import Excel Modal (Master Data) -->
+<div id="importExcelModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(15,23,42,.6);align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);">
+  <div class="bg-white rounded-3xl max-w-[520px] w-full p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+    <div class="flex justify-between items-center mb-6">
+      <div class="text-xl font-bold text-slate-900">Import Master Data (Excel)</div>
+      <button id="importExcelModalClose" class="text-slate-400 hover:text-slate-700 text-2xl font-bold leading-none bg-slate-50 hover:bg-slate-100 w-10 h-10 rounded-full flex items-center justify-center transition-colors">&times;</button>
     </div>
-    <div style="display:flex;flex-direction:column;gap:14px">
+    
+    <label class="import-drop flex flex-col items-center justify-center p-8 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:bg-brand-50 hover:border-brand-300 transition-colors" for="fileXlsx">
+      <div class="id-ic text-5xl mb-3">📁</div>
+      <b class="text-slate-700 text-lg mb-1">Choose or drag an Excel file</b>
+      <span class="text-slate-500 text-sm mb-4">Supports .xlsx · .xls · .csv</span>
+      <span class="id-btn btn-soft py-2 px-6 rounded-full text-sm">Browse File</span>
+    </label>
+    <input type="file" id="fileXlsx" accept=".xlsx,.xls,.csv" hidden>
+    
+    <div class="import-cols mt-6 bg-slate-50 border border-slate-100 p-4 rounded-xl">
+      <div class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Supported Columns</div>
+      <div class="flex flex-wrap gap-2 text-[11px] font-mono text-slate-600">
+        <span class="bg-white border border-slate-200 px-2 py-1 rounded">Order</span><span class="bg-white border border-slate-200 px-2 py-1 rounded">Project</span><span class="bg-white border border-slate-200 px-2 py-1 rounded">System</span><span class="bg-white border border-slate-200 px-2 py-1 rounded">Location Type</span><span class="bg-white border border-slate-200 px-2 py-1 rounded">Location</span><span class="bg-white border border-slate-200 px-2 py-1 rounded">Sub-location</span><span class="bg-white border border-slate-200 px-2 py-1 rounded">Equipment Type</span><span class="bg-white border border-slate-200 px-2 py-1 rounded">Equipment</span><span class="bg-white border border-slate-200 px-2 py-1 rounded">Brand</span><span class="bg-white border border-slate-200 px-2 py-1 rounded">Model</span><span class="bg-white border border-slate-200 px-2 py-1 rounded">Serial Number</span>
+      </div>
+    </div>
+    
+    <div class="flex gap-3 mt-6">
+      <button class="ghost-btn flex-1" onclick="downloadMasterTemplate()">Download Blank Form</button>
+      <button class="ghost-btn flex-1" onclick="downloadMasterData()">Download Current Data</button>
+    </div>
+    <div id="importPreview" class="mt-4"></div>
+  </div>
+</div>
+
+<!-- Assign Modal -->
+<div id="assignModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(15,23,42,.6);align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);">
+  <div class="bg-white rounded-3xl max-w-[520px] w-full p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+    <div class="flex justify-between items-center mb-6">
+      <div class="text-xl font-bold text-slate-900">Assign Work</div>
+      <button id="assignModalClose" class="text-slate-400 hover:text-slate-700 text-2xl font-bold leading-none bg-slate-50 hover:bg-slate-100 w-10 h-10 rounded-full flex items-center justify-center transition-colors">&times;</button>
+    </div>
+    
+    <div class="space-y-4">
       <div>
-        <label style="font-size:12px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:5px">Project *</label>
-        <div id="awProjectChips" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px"></div>
-        <input type="text" class="tin" id="awProject" placeholder="Add project…" autocomplete="off" style="width:100%">
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Project *</label>
+        <div id="awProjectChips" class="flex flex-wrap gap-2 mb-2 empty:hidden"></div>
+        <input type="text" class="tin" id="awProject" placeholder="Add project…" autocomplete="off">
       </div>
       <div>
-        <label style="font-size:12px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:5px">Assignee *</label>
-        <input type="text" class="tin" id="awAssignee" placeholder="Type or select assignee…" autocomplete="off" style="width:100%">
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Assignee *</label>
+        <input type="text" class="tin" id="awAssignee" placeholder="Type or select assignee…" autocomplete="off">
       </div>
-      <div>
-        <label style="font-size:12px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:8px">Work Scope</label>
-        <div style="display:flex;flex-wrap:wrap;gap:10px">
-          <label style="display:flex;align-items:center;gap:5px;font-size:13px"><input type="radio" name="awScope" value="project" checked> Whole Project</label>
-          <label style="display:flex;align-items:center;gap:5px;font-size:13px"><input type="radio" name="awScope" value="loc"> Location</label>
-          <label style="display:flex;align-items:center;gap:5px;font-size:13px"><input type="radio" name="awScope" value="sub"> Sub-location</label>
-          <label style="display:flex;align-items:center;gap:5px;font-size:13px"><input type="radio" name="awScope" value="equip"> Equipment</label>
-          <label style="display:flex;align-items:center;gap:5px;font-size:13px"><input type="radio" name="awScope" value="missing"> Missing Data</label>
+      <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Work Scope</label>
+        <div class="flex flex-wrap gap-4">
+          <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="awScope" value="project" class="accent-brand-500 w-4 h-4" checked> <span class="text-sm font-medium">Whole Project</span></label>
+          <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="awScope" value="loc" class="accent-brand-500 w-4 h-4"> <span class="text-sm font-medium">Location</span></label>
+          <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="awScope" value="sub" class="accent-brand-500 w-4 h-4"> <span class="text-sm font-medium">Sub-location</span></label>
+          <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="awScope" value="equip" class="accent-brand-500 w-4 h-4"> <span class="text-sm font-medium">Equipment</span></label>
+          <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="awScope" value="missing" class="accent-brand-500 w-4 h-4"> <span class="text-sm font-medium">Missing Data</span></label>
         </div>
       </div>
+      
       <div id="awLocRow" style="display:none">
-        <label style="font-size:12px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:5px">Location</label>
-        <div id="awLocChips" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px"></div>
-        <input type="text" class="tin" id="awLoc" placeholder="Add location…" autocomplete="off" style="width:100%">
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Location</label>
+        <div id="awLocChips" class="flex flex-wrap gap-2 mb-2 empty:hidden"></div>
+        <input type="text" class="tin" id="awLoc" placeholder="Add location…" autocomplete="off">
       </div>
       <div id="awSubRow" style="display:none">
-        <label style="font-size:12px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:5px">Sub-location</label>
-        <div id="awSubChips" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px"></div>
-        <input type="text" class="tin" id="awSub" placeholder="Add sub-location…" autocomplete="off" style="width:100%">
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Sub-location</label>
+        <div id="awSubChips" class="flex flex-wrap gap-2 mb-2 empty:hidden"></div>
+        <input type="text" class="tin" id="awSub" placeholder="Add sub-location…" autocomplete="off">
       </div>
       <div id="awEquipRow" style="display:none">
-        <label style="font-size:12px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:5px">Equipment</label>
-        <div id="awEquipChips" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px"></div>
-        <input type="text" class="tin" id="awEquip" placeholder="Add equipment…" autocomplete="off" style="width:100%">
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Equipment</label>
+        <div id="awEquipChips" class="flex flex-wrap gap-2 mb-2 empty:hidden"></div>
+        <input type="text" class="tin" id="awEquip" placeholder="Add equipment…" autocomplete="off">
       </div>
       <div id="awMissingRow" style="display:none">
-        <label style="font-size:12px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:8px">Records Missing Data <span id="awMissingCount"></span></label>
-        <div class="table-wrap" style="max-height:200px;overflow-y:auto">
-          <table style="width:100%">
-            <thead><tr><th style="padding:6px 10px"><input type="checkbox" id="awMissingSelectAll"></th><th style="padding:6px 8px">Sub-location</th><th style="padding:6px 8px">Equipment</th><th style="padding:6px 8px">Missing Fields</th></tr></thead>
-            <tbody id="awMissingBody"></tbody>
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Records Missing Data <span id="awMissingCount" class="text-brand-500 ml-1"></span></label>
+        <div class="table-wrap max-h-[200px] overflow-y-auto custom-scrollbar border border-slate-200">
+          <table class="w-full text-xs">
+            <thead class="bg-slate-100 sticky top-0"><tr><th class="p-2 w-8"><input type="checkbox" id="awMissingSelectAll" class="rounded text-brand-500"></th><th class="p-2">Sub-location</th><th class="p-2">Equipment</th><th class="p-2">Missing Fields</th></tr></thead>
+            <tbody id="awMissingBody" class="divide-y divide-slate-100"></tbody>
           </table>
         </div>
       </div>
-      <div><label style="font-size:12px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:5px">Note</label><input type="text" class="tin" id="awNote" placeholder="Note (optional)" style="width:100%"></div>
+      
+      <div><label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Note</label><input type="text" class="tin" id="awNote" placeholder="Note (optional)"></div>
       <div>
-        <label style="font-size:12px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:5px">Due Date <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label>
-        <input type="date" class="tin" id="awTargetDate" style="width:100%">
-        <div style="font-size:11px;color:var(--ink-faint);margin-top:3px" id="awTargetHint"></div>
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Due Date <span class="font-normal normal-case text-slate-400 ml-1">(optional)</span></label>
+        <input type="date" class="tin" id="awTargetDate">
+        <div class="text-xs text-slate-400 mt-1.5" id="awTargetHint"></div>
       </div>
     </div>
-    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
-      <button class="btn btn-soft" id="awCancelBtn">Cancel</button>
-      <button class="btn btn-primary" id="awSaveBtn">Assign Work</button>
+    
+    <div class="flex gap-3 justify-end mt-8">
+      <button class="btn-soft px-6" id="awCancelBtn">Cancel</button>
+      <button class="btn-primary px-8" id="awSaveBtn">Assign Work</button>
     </div>
   </div>
 </div>
 
-<!-- ══════ PROJECT TARGET MODAL ══════ -->
-<div id="projectTargetModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(20,26,34,.5);align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--surface);border-radius:18px;max-width:420px;width:100%;padding:28px;box-shadow:0 8px 40px rgba(0,0,0,.2);position:relative">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <div style="font-size:17px;font-weight:700;color:var(--ink)">Set Project Target</div>
-      <button id="ptModalClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink-faint)">&times;</button>
+<!-- Project Target Modal -->
+<div id="projectTargetModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(15,23,42,.6);align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);">
+  <div class="bg-white rounded-3xl max-w-[420px] w-full p-8 shadow-2xl relative">
+    <div class="flex justify-between items-center mb-6">
+      <div class="text-xl font-bold text-slate-900">Set Project Target</div>
+      <button id="ptModalClose" class="text-slate-400 hover:text-slate-700 text-2xl font-bold leading-none bg-slate-50 hover:bg-slate-100 w-10 h-10 rounded-full flex items-center justify-center transition-colors">&times;</button>
     </div>
-    <div style="display:flex;flex-direction:column;gap:14px">
-      <div>
-        <label style="font-size:12px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:5px">Project *</label>
-        <input type="text" class="tin" id="ptProject" placeholder="Type or select a project…" autocomplete="off" style="width:100%">
-      </div>
-      <div>
-        <label style="font-size:12px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:5px">Due Date *</label>
-        <input type="date" class="tin" id="ptDeadline" style="width:100%">
-      </div>
-      <div>
-        <label style="font-size:12px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:5px">Note</label>
-        <input type="text" class="tin" id="ptNote" placeholder="Note (optional)" style="width:100%">
-      </div>
-      <div id="ptCurrentInfo" style="font-size:12px;color:var(--ink-soft);background:var(--bg);border-radius:8px;padding:8px 12px;display:none"></div>
+    <div class="space-y-4">
+      <div><label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Project *</label><input type="text" class="tin" id="ptProject" placeholder="Type or select a project…" autocomplete="off"></div>
+      <div><label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Due Date *</label><input type="date" class="tin" id="ptDeadline"></div>
+      <div><label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Note</label><input type="text" class="tin" id="ptNote" placeholder="Note (optional)"></div>
+      <div id="ptCurrentInfo" class="text-sm text-slate-600 bg-slate-50 border border-slate-100 rounded-xl p-3" style="display:none"></div>
     </div>
-    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
-      <button class="btn btn-soft" id="ptCancelBtn">Cancel</button>
-      <button class="btn btn-primary" id="ptSaveBtn">Save Target</button>
+    <div class="flex gap-3 justify-end mt-8">
+      <button class="btn-soft px-6" id="ptCancelBtn">Cancel</button>
+      <button class="btn-primary px-8" id="ptSaveBtn">Save Target</button>
     </div>
   </div>
 </div>
 
-<!-- ══════ FILL DATA MODAL ══════ -->
-<div id="fillDataModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(20,26,34,.5);align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--surface);border-radius:18px;max-width:400px;width:100%;padding:28px;box-shadow:0 8px 40px rgba(0,0,0,.2);position:relative">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-      <div style="font-size:16px;font-weight:700;color:var(--ink)">Fill Missing Data</div>
-      <button id="fillDataClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink-faint)">&times;</button>
+<!-- Fill Data Modal -->
+<div id="fillDataModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(15,23,42,.6);align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);">
+  <div class="bg-white rounded-3xl max-w-[400px] w-full p-8 shadow-2xl relative">
+    <div class="flex justify-between items-center mb-5">
+      <div class="text-xl font-bold text-slate-900">Fill Missing Data</div>
+      <button id="fillDataClose" class="text-slate-400 hover:text-slate-700 text-2xl font-bold leading-none bg-slate-50 hover:bg-slate-100 w-10 h-10 rounded-full flex items-center justify-center transition-colors">&times;</button>
     </div>
-    <div id="fillDataInfo" style="margin-bottom:14px;font-size:13px;color:var(--ink-soft)"></div>
-    <div id="fillDataFields" style="display:flex;flex-direction:column;gap:12px"></div>
-    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
-      <button class="btn btn-soft" id="fillDataCancel">Cancel</button>
-      <button class="btn btn-primary" id="fillDataSave">Save</button>
+    <div id="fillDataInfo" class="mb-5 text-sm font-medium text-slate-500 bg-slate-50 p-3 rounded-lg"></div>
+    <div id="fillDataFields" class="flex flex-col gap-4"></div>
+    <div class="flex gap-3 justify-end mt-8">
+      <button class="btn-soft px-6" id="fillDataCancel">Cancel</button>
+      <button class="btn-primary px-8" id="fillDataSave">Save</button>
     </div>
   </div>
+</div>
+
+<!-- QR Scan Modal -->
+<div id="qrScanModal" style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.85);align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(8px);">
+  <div class="bg-white rounded-3xl max-w-[420px] w-full p-6 shadow-2xl relative">
+    <div class="flex justify-between items-center mb-4">
+      <div class="text-lg font-bold text-slate-900">Scan QR / Barcode</div>
+      <button id="qrScanClose" class="text-slate-400 hover:text-slate-700 text-2xl font-bold leading-none bg-slate-50 hover:bg-slate-100 w-10 h-10 rounded-full flex items-center justify-center transition-colors">&times;</button>
+    </div>
+    <div id="qrReaderBox" class="w-full rounded-2xl overflow-hidden bg-black min-h-[260px] relative shadow-inner flex items-center justify-center"></div>
+    <div id="qrScanMsg" class="mt-4 text-sm font-medium text-slate-500 text-center">Initializing camera…</div>
+    
+    <div class="flex items-center gap-3 my-5">
+      <div class="flex-1 h-px bg-slate-200"></div>
+      <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">OR</span>
+      <div class="flex-1 h-px bg-slate-200"></div>
+    </div>
+    
+    <label class="btn-soft w-full flex items-center justify-center gap-2 cursor-pointer border-dashed border-2 hover:border-brand-300 hover:bg-brand-50" for="qrScanFile">
+      <span class="text-lg">🖼️</span> Upload QR Image
+    </label>
+    <input type="file" id="qrScanFile" accept="image/*" class="hidden">
+  </div>
+</div>
+
+<!-- QR Generator Modal -->
+<div id="qrMasterModal" style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(15,23,42,.6);align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);">
+  <div class="bg-white rounded-3xl max-w-[420px] w-full p-8 shadow-2xl relative">
+    <button id="qrMasterClose" class="absolute top-5 right-5 text-slate-400 hover:text-slate-700 text-2xl font-bold leading-none bg-slate-50 hover:bg-slate-100 w-10 h-10 rounded-full flex items-center justify-center transition-colors">&times;</button>
+    <div class="text-xl font-bold text-slate-900 mb-2">Generate QR Codes</div>
+    <div class="text-sm text-slate-500 mb-6">Narrow down with filters, or leave as "All" to include everything.</div>
+    <div class="flex flex-col gap-3">
+      <select id="qrfProject" class="tin"><option value="">All Projects</option></select>
+      <select id="qrfTypeLoc" class="tin"><option value="">All Location Types</option></select>
+      <select id="qrfLoc" class="tin"><option value="">All Locations</option></select>
+      <select id="qrfSub" class="tin"><option value="">All Sub-locations</option></select>
+      <select id="qrfEquip" class="tin"><option value="">All Equipment</option></select>
+    </div>
+    <div id="qrMasterCount" class="mt-5 text-sm font-bold text-brand-600 bg-brand-50 p-3 rounded-xl text-center empty:hidden"></div>
+    <button class="btn-primary w-full mt-6 py-3.5 text-base" id="qrMasterGenBtn">Generate QR Codes PDF</button>
+  </div>
+</div>
+
+<!-- Warp Animation Overlay -->
+<div id="warpOverlay" style="display:none;position:fixed;inset:0;z-index:99999;background:#0f172a;overflow:hidden">
+  <canvas id="warpCanvas" class="absolute inset-0 w-full h-full block"></canvas>
+  <div id="warpDone" class="hidden absolute inset-0 items-center justify-center flex-col">
+    <canvas id="warpPlanet" width="240" height="240"></canvas>
+    <div id="warpDoneText" class="text-2xl font-bold text-white mt-6">Report generated ✨</div>
+  </div>
+  <div id="warpStatus" class="absolute bottom-10 left-0 right-0 text-center text-slate-400 text-sm font-medium"></div>
 </div>
 
 </main>
 
 <div id="reportArea"></div>
-<div class="toast" id="toast"><span class="tdot"></span><span id="toastMsg"></span></div>
 
-<!-- ══════ MODAL: QR/BARCODE SCAN ══════ -->
-<div id="qrScanModal" style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(10,14,20,.85);align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--surface);border-radius:18px;max-width:420px;width:100%;padding:20px;box-shadow:0 8px 40px rgba(0,0,0,.3)">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-      <div style="font-size:16px;font-weight:700;color:var(--ink)">Scan QR / Barcode</div>
-      <button id="qrScanClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink-faint)">&times;</button>
-    </div>
-    <div id="qrReaderBox" style="width:100%;border-radius:12px;overflow:hidden;background:#000;min-height:240px"></div>
-    <div id="qrScanMsg" style="margin-top:12px;font-size:13px;color:var(--ink-soft);text-align:center">Opening camera…</div>
-    <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
-      <div style="flex:1;height:1px;background:var(--line)"></div>
-      <span style="font-size:12px;color:var(--ink-faint)">or</span>
-      <div style="flex:1;height:1px;background:var(--line)"></div>
-    </div>
-    <label class="ghost-btn" for="qrScanFile" style="width:100%;justify-content:center;margin-top:14px;cursor:pointer">Attach a photo to scan</label>
-    <input type="file" id="qrScanFile" accept="image/*" style="display:none">
-  </div>
+<!-- Toast Notification -->
+<div class="toast fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 font-medium text-sm transition-transform translate-y-[150%] z-[9999]" id="toast" style="display:none">
+  <span class="tdot w-2 h-2 rounded-full bg-brand-500"></span>
+  <span id="toastMsg"></span>
 </div>
 
-<!-- ══════ MODAL: QR CODE GENERATOR (Master Data, admin only) ══════ -->
-<div id="qrMasterModal" style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(10,14,20,.85);align-items:center;justify-content:center;padding:20px">
-  <div style="background:#fff;border-radius:18px;max-width:420px;width:100%;padding:26px;box-shadow:0 8px 40px rgba(0,0,0,.3);position:relative">
-    <button id="qrMasterClose" style="position:absolute;top:14px;right:14px;background:none;border:none;font-size:22px;cursor:pointer;color:#888">&times;</button>
-    <div style="font-size:17px;font-weight:700;color:#111;margin-bottom:4px">Generate QR Codes</div>
-    <div style="font-size:13px;color:#666;margin-bottom:16px">Narrow down with filters, or leave as "All" to include everything</div>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <select id="qrfProject" class="tin" style="width:100%"><option value="">All Projects</option></select>
-      <select id="qrfTypeLoc" class="tin" style="width:100%"><option value="">All Location Types</option></select>
-      <select id="qrfLoc" class="tin" style="width:100%"><option value="">All Locations</option></select>
-      <select id="qrfSub" class="tin" style="width:100%"><option value="">All Sub-locations</option></select>
-      <select id="qrfEquip" class="tin" style="width:100%"><option value="">All Equipment</option></select>
-    </div>
-    <div id="qrMasterCount" style="margin-top:14px;font-size:13px;color:#444"></div>
-    <button class="btn btn-primary" id="qrMasterGenBtn" style="width:100%;margin-top:16px">Generate QR Codes</button>
-  </div>
-</div>
-
+<!-- ══════ SCRIPTS ══════ -->
 <script src="script.js?v=1790324153157"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
+
+// ---------------------------------------------------------------------------------
+// MOCK SCRIPT สำหรับดู DEMO (ไม่ต้องกังวลครับ สคริปต์นี้จะไม่กระทบกับฟังก์ชันใน script.js ของคุณ)
+// จะทำงานเฉพาะตอนไม่มี script.js ตัวจริง หรือเป็นการเปิดดูชั่วคราว
+// ---------------------------------------------------------------------------------
+document.addEventListener('DOMContentLoaded', () => {
+  // จำลองระบบสลับ Tab UI แบบเนียนๆ
+  const tabs = document.querySelectorAll('.tab');
+  const panels = document.querySelectorAll('.panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', (e) => {
+      tabs.forEach(t => t.classList.remove('active', 'bg-slate-800', 'text-white'));
+      tabs.forEach(t => t.classList.add('text-slate-500'));
+      panels.forEach(p => p.classList.remove('active'));
+      
+      e.target.classList.remove('text-slate-500');
+      e.target.classList.add('active', 'bg-slate-800', 'text-white');
+      
+      const targetId = 'panel-' + e.target.getAttribute('data-tab');
+      const targetPanel = document.getElementById(targetId);
+      if(targetPanel) targetPanel.classList.add('active');
+    });
+  });
+
+  // จำลองการข้ามหน้า Login (Bypass Auth) เพื่อให้คุณดู UI ได้เลย
+  setTimeout(() => {
+    const authGate = document.getElementById('authGate');
+    if(authGate) {
+      authGate.style.opacity = '0';
+      setTimeout(() => authGate.style.display = 'none', 300);
+    }
+    
+    // โชว์กล่อง Profile ด้านขวาบน
+    const userChip = document.getElementById('userChip');
+    if(userChip) {
+      userChip.style.display = 'flex';
+      document.getElementById('uName').innerText = 'Admin Demo';
+      document.getElementById('uRole').innerText = 'Administrator';
+    }
+
+    // Mock ข้อมูลลง Dashboard KPI สวยๆ
+    const kpiRow = document.getElementById('kpiRow');
+    if(kpiRow && kpiRow.innerHTML === '') {
+      kpiRow.innerHTML = `
+        <div class="bg-gradient-to-br from-brand-500 to-brand-600 rounded-2xl p-5 shadow-sm text-white relative overflow-hidden">
+          <div class="text-brand-100 text-xs font-bold uppercase tracking-wider mb-1">Total Records</div>
+          <div class="text-3xl font-black">124</div>
+          <div class="absolute -right-2 -bottom-2 text-white/20 text-6xl">📄</div>
+        </div>
+        <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-5 shadow-sm text-white relative overflow-hidden">
+          <div class="text-blue-100 text-xs font-bold uppercase tracking-wider mb-1">Projects</div>
+          <div class="text-3xl font-black">3</div>
+          <div class="absolute -right-2 -bottom-2 text-white/20 text-6xl">🏢</div>
+        </div>
+        <div class="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-5 shadow-sm text-white relative overflow-hidden">
+          <div class="text-emerald-100 text-xs font-bold uppercase tracking-wider mb-1">Today</div>
+          <div class="text-3xl font-black">12</div>
+          <div class="absolute -right-2 -bottom-2 text-white/20 text-6xl">📅</div>
+        </div>
+        <div class="bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl p-5 shadow-sm text-white relative overflow-hidden">
+          <div class="text-amber-100 text-xs font-bold uppercase tracking-wider mb-1">With Photos</div>
+          <div class="text-3xl font-black">118</div>
+          <div class="absolute -right-2 -bottom-2 text-white/20 text-6xl">📷</div>
+        </div>
+      `;
+    }
+    
+    // Mock ข้อมูลลงตาราง Dashboard
+    const equipTable = document.getElementById('dashEquipTableWrap');
+    if(equipTable && equipTable.innerHTML === '') {
+      equipTable.innerHTML = `
+        <div class="flex items-center gap-4 p-3 bg-slate-50 rounded-xl mb-2 border border-slate-100 hover:border-brand-200 transition-colors">
+            <div class="text-2xl bg-white w-10 h-10 rounded-lg flex items-center justify-center shadow-sm">📷</div>
+            <div class="flex-1"><div class="font-bold text-sm text-slate-800">Dome Camera</div><div class="text-xs text-slate-500">Building A, Floor 1</div></div>
+        </div>
+        <div class="flex items-center gap-4 p-3 bg-slate-50 rounded-xl mb-2 border border-slate-100 hover:border-brand-200 transition-colors">
+            <div class="text-2xl bg-white w-10 h-10 rounded-lg flex items-center justify-center shadow-sm">🪪</div>
+            <div class="flex-1"><div class="font-bold text-sm text-slate-800">Card Reader</div><div class="text-xs text-slate-500">Building B, Floor 2</div></div>
+        </div>
+        <div class="flex items-center gap-4 p-3 bg-slate-50 rounded-xl mb-2 border border-slate-100 hover:border-brand-200 transition-colors">
+            <div class="text-2xl bg-white w-10 h-10 rounded-lg flex items-center justify-center shadow-sm">🖧</div>
+            <div class="flex-1"><div class="font-bold text-sm text-slate-800">Core Switch</div><div class="text-xs text-slate-500">Building C, Floor 3</div></div>
+        </div>
+      `;
+    }
+
+    // Initialize progress bar visual mock
+    const progTotalPct = document.getElementById('progTotalPct');
+    const progChart = document.getElementById('progChart');
+    if(progTotalPct && progChart && progTotalPct.innerText === '') {
+      progTotalPct.innerText = '85%';
+      document.getElementById('progSummary').innerText = '124 of 145 items recorded';
+      progChart.innerHTML = '<div class="h-3 bg-slate-100 rounded-full overflow-hidden w-full"><div class="h-full bg-brand-500 w-[85%] rounded-full shadow-[0_0_10px_rgba(217,58,43,0.5)]"></div></div>';
+    }
+
+  }, 800); // ดีเลย์เล็กน้อยเพื่อให้เห็นว่ามีการข้ามระบบ Login
+});
 </script>
+
 </body>
 </html>
