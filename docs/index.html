@@ -41,7 +41,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Equipment Report">
 
-<!-- Custom Styles merging your classes with modern aesthetics -->
+<!-- Custom Styles for UI & Layout synchronization -->
 <style>
   :root { --accent: #D93A2B; --surface: #ffffff; --bg: #f8fafc; --ink: #0f172a; --ink-soft: #64748b; --line: #e2e8f0; --accent-deep: #b92d20; --line-soft: #f1f5f9; --shadow: 0 4px 20px -2px rgba(0,0,0,0.05); }
   body { -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
@@ -62,8 +62,8 @@
   .btn-danger { @apply bg-red-500 text-white hover:bg-red-600 shadow-float py-3 px-5 border-none; }
   .ghost-btn { @apply bg-transparent border border-slate-200 text-slate-600 hover:bg-slate-50 py-2.5 px-4 rounded-xl text-sm font-medium cursor-pointer; }
   
-  .dash-card { @apply bg-white border border-slate-100 rounded-2xl p-5 shadow-soft flex flex-col; }
-  .dc-head { @apply flex justify-between items-start mb-4; }
+  .dash-card { @apply bg-white border border-slate-100 rounded-2xl p-5 shadow-soft flex flex-col mb-5; }
+  .dc-head { @apply flex justify-between items-center mb-4; }
   .dc-head b { @apply text-base font-bold text-slate-800; }
   
   .card { @apply bg-white border border-slate-100 rounded-2xl p-5 shadow-soft mb-5; }
@@ -71,14 +71,13 @@
   .card-h h3 { @apply text-lg font-bold text-slate-800 m-0; }
   .step { @apply bg-brand-50 text-brand-600 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shrink-0; }
   .req { @apply text-brand-500 ml-1; }
-  .pill { @apply bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-xs font-bold ml-1; }
+  .pill { @apply bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full text-xs font-bold ml-1; }
 
   /* Typography & Layout elements */
   .panel-title { @apply text-2xl font-bold tracking-tight text-slate-900 mb-6; }
   .field { @apply mb-4; }
   .field label { @apply block text-sm font-semibold text-slate-600 mb-1.5; }
   
-  /* Specific UI Mappings for JS compatibility */
   .combo { @apply relative; }
   .combo.disabled { @apply opacity-50 pointer-events-none; }
   .imgslot { @apply flex flex-col gap-2; }
@@ -101,11 +100,9 @@
   .flt-drawer-toggle { @apply cursor-pointer font-medium text-sm text-slate-600 py-2.5 px-4 bg-white border border-slate-200 rounded-xl hover:bg-slate-50; list-style: none; }
   .flt-drawer-toggle::-webkit-details-marker { display: none; }
   
-  /* Custom Scrollbar */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-  .scrollbar-hide::-webkit-scrollbar { display: none; }
 </style>
 </head>
 <body class="min-h-screen pb-20 sm:pb-8">
@@ -233,7 +230,6 @@
     </div>
   </div>
 
-  <!-- Note: JS will inject HTML into #kpiRow. I added grid classes here to format the injected items nicely. -->
   <div class="kpi-row grid grid-cols-2 lg:grid-cols-4 gap-4" id="kpiRow"></div>
 
   <div class="dash-card" id="ganttCard" style="display:none">
@@ -318,7 +314,6 @@
         <div class="field md:col-span-2"><label>Serial Number</label><div class="combo disabled" data-level="serial"></div></div>
       </div>
       
-      <!-- Mocking .bm-row layout for injected contents -->
       <div class="bm-row flex gap-4 mt-2 bg-slate-50 p-4 rounded-xl border border-slate-100">
         <div class="bm-box flex-1"><div class="k text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Brand AUTO</div><div class="v empty font-medium text-slate-700" id="bmBrand" data-empty="— Select equipment —"><input class="tin" id="inpBrand" placeholder="—" style="display:none"></div></div>
         <div class="w-px bg-slate-200"></div>
@@ -417,9 +412,7 @@
     <button class="ghost-btn word-report-only flex items-center gap-2" id="openWordReportBtn" disabled><span class="text-blue-600">📄</span> Report</button>
   </div>
   
-  <div class="rlist grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" id="savedGrid">
-    <!-- Records will be injected here by JS -->
-  </div>
+  <div class="rlist grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" id="savedGrid"></div>
 </section>
 
 <!-- ══════ PANEL: MASTER ══════ -->
@@ -460,11 +453,9 @@
   <div class="table-wrap custom-scrollbar">
     <table class="w-full text-sm">
       <thead class="bg-slate-50 uppercase text-[10px] tracking-wider text-slate-500">
-        <tr><th title="Order used for generating Word/PDF" class="w-16 text-center">Order</th><th>Project</th><th>System</th><th>Loc Type</th><th>Location</th><th>Sub-loc</th><th>Eq. Type</th><th>Equipment</th><th>Brand</th><th>Model</th><th>Serial</th><th class="w-16"></th></tr>
+        <tr><th title="Order used for generating Word/PDF" class="w-16 text-center">Order</th><th>Project</th><th>System</th><th>Location Type</th><th>Location</th><th>Sub-loc</th><th>Eq. Type</th><th>Equipment</th><th>Brand</th><th>Model</th><th>Serial</th><th class="w-16"></th></tr>
       </thead>
-      <tbody id="masterBody" class="divide-y divide-slate-100">
-        <!-- Master data injected here by JS -->
-      </tbody>
+      <tbody id="masterBody" class="divide-y divide-slate-100"></tbody>
     </table>
   </div>
   <div id="masterLoadMoreWrap" class="text-center mt-6"></div>
@@ -557,16 +548,13 @@
       <thead class="bg-slate-50 uppercase text-[10px] tracking-wider text-slate-500">
         <tr><th>Username</th><th>Password</th><th>Full Name</th><th>Role</th><th>Project</th><th>Email</th><th>Status</th><th></th></tr>
       </thead>
-      <tbody id="usersBody" class="divide-y divide-slate-100">
-        <!-- Users injected here by JS -->
-      </tbody>
+      <tbody id="usersBody" class="divide-y divide-slate-100"></tbody>
     </table>
   </div>
 </section>
 
 <!-- ══════ MODALS AND OVERLAYS ══════ -->
 
-<!-- Add necessary structure for projDetailModal (Used in Dashboard) -->
 <div id="projDetailModal" style="display:none;position:fixed;inset:0;z-index:400;background:rgba(15,23,42,.6);align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);">
   <div class="bg-white rounded-3xl max-w-[480px] w-full p-8 shadow-2xl relative">
     <button onclick="document.getElementById('projDetailModal').style.display='none'" class="absolute top-5 right-5 text-slate-400 hover:text-slate-700 text-2xl font-bold leading-none bg-slate-50 hover:bg-slate-100 w-10 h-10 rounded-full flex items-center justify-center transition-colors">&times;</button>
@@ -574,7 +562,6 @@
   </div>
 </div>
 
-<!-- Import Excel Modal (Master Data) -->
 <div id="importExcelModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(15,23,42,.6);align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);">
   <div class="bg-white rounded-3xl max-w-[520px] w-full p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
     <div class="flex justify-between items-center mb-6">
@@ -605,7 +592,6 @@
   </div>
 </div>
 
-<!-- Assign Modal -->
 <div id="assignModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(15,23,42,.6);align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);">
   <div class="bg-white rounded-3xl max-w-[520px] w-full p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
     <div class="flex justify-between items-center mb-6">
@@ -674,7 +660,6 @@
   </div>
 </div>
 
-<!-- Project Target Modal -->
 <div id="projectTargetModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(15,23,42,.6);align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);">
   <div class="bg-white rounded-3xl max-w-[420px] w-full p-8 shadow-2xl relative">
     <div class="flex justify-between items-center mb-6">
@@ -694,7 +679,6 @@
   </div>
 </div>
 
-<!-- Fill Data Modal -->
 <div id="fillDataModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(15,23,42,.6);align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);">
   <div class="bg-white rounded-3xl max-w-[400px] w-full p-8 shadow-2xl relative">
     <div class="flex justify-between items-center mb-5">
@@ -710,7 +694,6 @@
   </div>
 </div>
 
-<!-- QR Scan Modal -->
 <div id="qrScanModal" style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.85);align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(8px);">
   <div class="bg-white rounded-3xl max-w-[420px] w-full p-6 shadow-2xl relative">
     <div class="flex justify-between items-center mb-4">
@@ -733,7 +716,6 @@
   </div>
 </div>
 
-<!-- QR Generator Modal -->
 <div id="qrMasterModal" style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(15,23,42,.6);align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);">
   <div class="bg-white rounded-3xl max-w-[420px] w-full p-8 shadow-2xl relative">
     <button id="qrMasterClose" class="absolute top-5 right-5 text-slate-400 hover:text-slate-700 text-2xl font-bold leading-none bg-slate-50 hover:bg-slate-100 w-10 h-10 rounded-full flex items-center justify-center transition-colors">&times;</button>
@@ -751,7 +733,6 @@
   </div>
 </div>
 
-<!-- Warp Animation Overlay -->
 <div id="warpOverlay" style="display:none;position:fixed;inset:0;z-index:99999;background:#0f172a;overflow:hidden">
   <canvas id="warpCanvas" class="absolute inset-0 w-full h-full block"></canvas>
   <div id="warpDone" class="hidden absolute inset-0 items-center justify-center flex-col">
@@ -764,117 +745,16 @@
 </main>
 
 <div id="reportArea"></div>
-
-<!-- Toast Notification -->
 <div class="toast fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 font-medium text-sm transition-transform translate-y-[150%] z-[9999]" id="toast" style="display:none">
   <span class="tdot w-2 h-2 rounded-full bg-brand-500"></span>
   <span id="toastMsg"></span>
 </div>
 
-<!-- ══════ SCRIPTS ══════ -->
 <script src="script.js?v=1790324153157"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
-
-// ---------------------------------------------------------------------------------
-// MOCK SCRIPT สำหรับดู DEMO (ไม่ต้องกังวลครับ สคริปต์นี้จะไม่กระทบกับฟังก์ชันใน script.js ของคุณ)
-// จะทำงานเฉพาะตอนไม่มี script.js ตัวจริง หรือเป็นการเปิดดูชั่วคราว
-// ---------------------------------------------------------------------------------
-document.addEventListener('DOMContentLoaded', () => {
-  // จำลองระบบสลับ Tab UI แบบเนียนๆ
-  const tabs = document.querySelectorAll('.tab');
-  const panels = document.querySelectorAll('.panel');
-  tabs.forEach(tab => {
-    tab.addEventListener('click', (e) => {
-      tabs.forEach(t => t.classList.remove('active', 'bg-slate-800', 'text-white'));
-      tabs.forEach(t => t.classList.add('text-slate-500'));
-      panels.forEach(p => p.classList.remove('active'));
-      
-      e.target.classList.remove('text-slate-500');
-      e.target.classList.add('active', 'bg-slate-800', 'text-white');
-      
-      const targetId = 'panel-' + e.target.getAttribute('data-tab');
-      const targetPanel = document.getElementById(targetId);
-      if(targetPanel) targetPanel.classList.add('active');
-    });
-  });
-
-  // จำลองการข้ามหน้า Login (Bypass Auth) เพื่อให้คุณดู UI ได้เลย
-  setTimeout(() => {
-    const authGate = document.getElementById('authGate');
-    if(authGate) {
-      authGate.style.opacity = '0';
-      setTimeout(() => authGate.style.display = 'none', 300);
-    }
-    
-    // โชว์กล่อง Profile ด้านขวาบน
-    const userChip = document.getElementById('userChip');
-    if(userChip) {
-      userChip.style.display = 'flex';
-      document.getElementById('uName').innerText = 'Admin Demo';
-      document.getElementById('uRole').innerText = 'Administrator';
-    }
-
-    // Mock ข้อมูลลง Dashboard KPI สวยๆ
-    const kpiRow = document.getElementById('kpiRow');
-    if(kpiRow && kpiRow.innerHTML === '') {
-      kpiRow.innerHTML = `
-        <div class="bg-gradient-to-br from-brand-500 to-brand-600 rounded-2xl p-5 shadow-sm text-white relative overflow-hidden">
-          <div class="text-brand-100 text-xs font-bold uppercase tracking-wider mb-1">Total Records</div>
-          <div class="text-3xl font-black">124</div>
-          <div class="absolute -right-2 -bottom-2 text-white/20 text-6xl">📄</div>
-        </div>
-        <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-5 shadow-sm text-white relative overflow-hidden">
-          <div class="text-blue-100 text-xs font-bold uppercase tracking-wider mb-1">Projects</div>
-          <div class="text-3xl font-black">3</div>
-          <div class="absolute -right-2 -bottom-2 text-white/20 text-6xl">🏢</div>
-        </div>
-        <div class="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-5 shadow-sm text-white relative overflow-hidden">
-          <div class="text-emerald-100 text-xs font-bold uppercase tracking-wider mb-1">Today</div>
-          <div class="text-3xl font-black">12</div>
-          <div class="absolute -right-2 -bottom-2 text-white/20 text-6xl">📅</div>
-        </div>
-        <div class="bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl p-5 shadow-sm text-white relative overflow-hidden">
-          <div class="text-amber-100 text-xs font-bold uppercase tracking-wider mb-1">With Photos</div>
-          <div class="text-3xl font-black">118</div>
-          <div class="absolute -right-2 -bottom-2 text-white/20 text-6xl">📷</div>
-        </div>
-      `;
-    }
-    
-    // Mock ข้อมูลลงตาราง Dashboard
-    const equipTable = document.getElementById('dashEquipTableWrap');
-    if(equipTable && equipTable.innerHTML === '') {
-      equipTable.innerHTML = `
-        <div class="flex items-center gap-4 p-3 bg-slate-50 rounded-xl mb-2 border border-slate-100 hover:border-brand-200 transition-colors">
-            <div class="text-2xl bg-white w-10 h-10 rounded-lg flex items-center justify-center shadow-sm">📷</div>
-            <div class="flex-1"><div class="font-bold text-sm text-slate-800">Dome Camera</div><div class="text-xs text-slate-500">Building A, Floor 1</div></div>
-        </div>
-        <div class="flex items-center gap-4 p-3 bg-slate-50 rounded-xl mb-2 border border-slate-100 hover:border-brand-200 transition-colors">
-            <div class="text-2xl bg-white w-10 h-10 rounded-lg flex items-center justify-center shadow-sm">🪪</div>
-            <div class="flex-1"><div class="font-bold text-sm text-slate-800">Card Reader</div><div class="text-xs text-slate-500">Building B, Floor 2</div></div>
-        </div>
-        <div class="flex items-center gap-4 p-3 bg-slate-50 rounded-xl mb-2 border border-slate-100 hover:border-brand-200 transition-colors">
-            <div class="text-2xl bg-white w-10 h-10 rounded-lg flex items-center justify-center shadow-sm">🖧</div>
-            <div class="flex-1"><div class="font-bold text-sm text-slate-800">Core Switch</div><div class="text-xs text-slate-500">Building C, Floor 3</div></div>
-        </div>
-      `;
-    }
-
-    // Initialize progress bar visual mock
-    const progTotalPct = document.getElementById('progTotalPct');
-    const progChart = document.getElementById('progChart');
-    if(progTotalPct && progChart && progTotalPct.innerText === '') {
-      progTotalPct.innerText = '85%';
-      document.getElementById('progSummary').innerText = '124 of 145 items recorded';
-      progChart.innerHTML = '<div class="h-3 bg-slate-100 rounded-full overflow-hidden w-full"><div class="h-full bg-brand-500 w-[85%] rounded-full shadow-[0_0_10px_rgba(217,58,43,0.5)]"></div></div>';
-    }
-
-  }, 800); // ดีเลย์เล็กน้อยเพื่อให้เห็นว่ามีการข้ามระบบ Login
-});
 </script>
-
 </body>
 </html>
